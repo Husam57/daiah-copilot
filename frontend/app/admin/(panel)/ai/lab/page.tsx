@@ -90,7 +90,7 @@ export default function LabPage() {
                   { value: "en", label: "English", lang: "en" },
                 ]}
               />
-              <span className="text-xs tabular-nums text-text-muted">
+              <span dir="ltr" className="text-xs tabular-nums text-text-muted">
                 {formatNumber(message.length)}/{formatNumber(MAX)}
               </span>
             </div>
@@ -220,7 +220,7 @@ function ResultView({ data }: { data: LabResult }) {
               <>
                 {SOURCE_LABEL[data.classification.source ?? ""] ?? "—"}
                 {data.classification.model && (
-                  <code className="ms-1 font-en text-xs text-text-muted" dir="ltr">
+                  <code className="mt-0.5 block font-en text-xs text-text-muted" dir="ltr">
                     {data.classification.model}
                   </code>
                 )}

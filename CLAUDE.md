@@ -23,19 +23,22 @@ methodology | shubuhat | intro_islam | new_muslim
 
 ## الجداول
 sections(id, parent_id, name_ar, name_en, slug, category, description, sort_order, is_active)
-posts(id, section_id, slug, title_ar, title_en, content_ar, content_en, summary_ar, tags[], external_ref, topic, source_name, content_type[article|booklet|leaflet|shubha_response], file_url, status[draft|review|published], created_by, reviewed_by, published_at, updated_at, indexed_at)
+posts(id, section_id, slug, title_ar, title_en, content_ar, content_en, summary_ar, tags[], external_ref, topic, source_name, content_type[article|booklet|leaflet|shubha_response], file_url, status[draft|review|published], created_by, reviewed_by, published_at, updated_at, indexed_at, review_note*)
+  (*review_note اختياري: ALTER في schema.sql؛ الـ Backend يعمل بدونه ويرجع note_saved=false)
 post_chunks(id, post_id, lang, chunk_index, chunk_text, embedding vector)
-ai_settings(id, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, version, is_active, updated_by)
+ai_settings(id, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, version, is_active, updated_by, updated_at)
+ai_settings_history(id, version, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, updated_by, saved_at) — نسخة من الصف قبل كل PUT/استرجاع
 referral_centers(id, name, country, url, contact)
 chat_logs(id, session_id, question, detected_category, lang, matched_post_id, score, is_fallback, feedback, created_at)
 users(id, name, email, password_hash, role[admin|editor])
 
 ## الـ API
-Auth: POST /api/auth/login, GET /api/auth/me
-Admin (JWT): /api/admin/sections, /api/admin/posts, POST /api/admin/posts/{id}/publish, POST /api/admin/posts/{id}/reindex,
-  GET|PUT /api/admin/ai/settings, POST /api/admin/ai/reindex, GET /api/admin/ai/index-status, POST /api/admin/ai/test,
+Auth: POST /api/auth/login, GET|PUT /api/auth/me {name, email}, PUT /api/auth/me/password {current_password, new_password}
+Admin (JWT): /api/admin/sections, /api/admin/posts (?status=&section_id=&content_type=&lang=en|ar_only&q=&page=), POST /api/admin/posts/{id}/publish,
+  POST /api/admin/posts/{id}/reindex, POST /api/admin/posts/{id}/return-to-draft {note?},
+  GET|PUT /api/admin/ai/settings, GET /api/admin/ai/settings/history, POST /api/admin/ai/settings/restore/{history_id}, POST /api/admin/ai/reindex, GET /api/admin/ai/index-status, POST /api/admin/ai/test,
   GET /api/admin/ai/logs?fallback=&page=, GET /api/admin/ai/unanswered, CRUD /api/admin/referral-centers,
-  GET /api/admin/dashboard/stats
+  GET /api/admin/dashboard/stats, GET /api/admin/dashboard/activity, GET /api/admin/dashboard/system-status?refresh=
 Public: GET /api/sections, /api/sections/{slug}/posts, /api/posts/{slug}, /api/search?q= (لم يُنفّذ بعد)
 Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ..., log_id}, POST /api/chat/feedback {log_id, helpful}
   (حد 20 طلباً/دقيقة لكل IP في الذاكرة)
@@ -55,8 +58,16 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - pipeline.py: تصنيف و embedding بالتوازي -> بحث -> match (post.content حرفياً من posts) أو fallback (رسالة ai_settings + closest + referral_centers). يُستخدم في /api/chat و /api/admin/ai/test.
 - chat_logs: في fallback يُحفظ أقرب منشور ودرجته في matched_post_id/score (للأسئلة غير المجابة). lang = لغة المادة المطلوبة.
 
+## لوحة التحكم (frontend/) — الخطوة 6
+- Next.js 16 (App Router، cacheComponents=false) + TypeScript + Tailwind v4 (الـ tokens في app/globals.css داخل @theme) + Radix (radix-ui) + lucide-react + TipTap 3 + sonner + DOMPurify.
+- <html lang="ar" dir="rtl">، Tajawal + Inter عبر next/font. خصائص منطقية فقط (ms/me/ps/pe/start/end).
+- lib/api.ts: عميل موحد (JWT من localStorage `daiah.token`، أخطاء عربية، 401 -> حدث يحوّل لـ /admin/login?next=). lib/auth.tsx: AuthProvider. lib/use-api.ts: useApi.
+- components/ui/: المكونات المشتركة (ApprovedTextCard, GuidanceBubble, FallbackCard, SourceChip, StatCard, StatusDot, Stepper, DataTable, ...). /design-system يعرضها.
+- app/admin/login + app/admin/(panel)/* (محمية في layout). أي HTML منشور يُعرض عبر SafeHtml (DOMPurify).
+- frontend/.env.local: NEXT_PUBLIC_API_URL=http://localhost:8000 فقط (لا أسرار في الواجهة).
+
 ## الاختبارات (من مجلد backend، على Supabase و Gemini الحقيقيين، وتحذف بياناتها)
-smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
+e2e_run.py (يشغّل frontend/scripts/e2e-check.mjs: صفحات /admin + سيناريو كامل؛ يتطلب السيرفرين يعملان) · smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
 
 ## الأمان
 - المفاتيح في backend/.env فقط (SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD). لا تعرض قيمها أبداً ولا تطبعها.

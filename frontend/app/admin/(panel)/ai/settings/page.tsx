@@ -196,6 +196,7 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
                 label="التعليمات"
                 aside={
                   <span
+                    dir="ltr"
                     className={cn(
                       "text-xs tabular-nums",
                       form.guidance_prompt.length > PROMPT_MAX ? "text-danger" : "text-text-muted",
@@ -265,6 +266,7 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
                   id="topk"
                   type="number"
                   dir="ltr"
+                  lang="en"
                   min={1}
                   max={10}
                   value={form.top_k}

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "e2e": "node scripts/e2e-check.mjs"
   },
   "dependencies": {
     "@tiptap/extensions": "^3.35.0",

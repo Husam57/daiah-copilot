@@ -53,8 +53,8 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface p-5 shadow-sm", className)}>
-      <div className="flex items-start gap-3">
+    <div className={cn("rounded-lg border border-border bg-surface p-4 shadow-sm sm:p-5", className)}>
+      <div className="flex flex-col items-start gap-3 sm:flex-row">
         <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-600 [&_svg]:size-5">
           {icon}
         </div>

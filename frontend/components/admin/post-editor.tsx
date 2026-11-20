@@ -313,7 +313,7 @@ export function PostEditor({
               {dirty ? <span className="text-warning-fg">تعديلات غير محفوظة</span> : !isNew && <span>محفوظ</span>}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             <Button variant="ghost" onClick={() => setPreview(true)}>
               <Eye aria-hidden />
               <span className="hidden sm:inline">معاينة</span>
@@ -412,7 +412,7 @@ export function PostEditor({
                 id="p-summary"
                 label="الملخص"
                 hint="سطران يظهران في بطاقات المكتبة."
-                aside={<span className="text-xs text-text-muted tabular-nums">{form.summary_ar.length}/300</span>}
+                aside={<span dir="ltr" className="text-xs text-text-muted tabular-nums">{form.summary_ar.length} / 300</span>}
               >
                 <Textarea id="p-summary" maxLength={300} value={form.summary_ar} onChange={(e) => set("summary_ar", e.target.value)} />
               </Field>

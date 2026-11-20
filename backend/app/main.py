@@ -119,7 +119,27 @@ async def db_handler(_: Request, exc: APIError) -> JSONResponse:
     return JSONResponse(status_code=code, content={"detail": msg})
 
 
+def _cors_headers(request: Request) -> dict:
+    """معالج Exception العام يعمل خارج CORSMiddleware، فنضيف الترويسات يدوياً
+    حتى ترى الواجهة رسالة الخطأ العربية بدل خطأ CORS."""
+    origin = request.headers.get("origin")
+    if origin and origin in settings.cors_origins:
+        return {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Vary": "Origin"}
+    return {}
+
+
+_NETWORK_ERRORS = ("ConnectError", "ConnectTimeout", "ReadTimeout", "RemoteProtocolError", "ReadError", "WriteError")
+
+
 @app.exception_handler(Exception)
-async def unhandled_handler(_: Request, exc: Exception) -> JSONResponse:
+async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
     log.error("Unhandled %s: %s", type(exc).__name__, redact(str(exc)))
-    return JSONResponse(status_code=500, content={"detail": "حدث خطأ غير متوقع في الخادم"})
+    if type(exc).__name__ in _NETWORK_ERRORS:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "تعذّر الاتصال بخدمة خارجية (قاعدة البيانات أو Gemini) مؤقتاً، حاول مرة أخرى"},
+            headers=_cors_headers(request),
+        )
+    return JSONResponse(
+        status_code=500, content={"detail": "حدث خطأ غير متوقع في الخادم"}, headers=_cors_headers(request)
+    )

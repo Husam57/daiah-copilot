@@ -69,7 +69,7 @@ export default function DashboardPage() {
           <ErrorState message={stats.error.message} onRetry={stats.reload} />
         </Card>
       ) : (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard
             icon={<FolderTree />}
             label="الأقسام"

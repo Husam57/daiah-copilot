@@ -397,6 +397,7 @@ function SectionForm({ section, all, onSaved }: { section: Section | null; all: 
               id="s-order"
               type="number"
               dir="ltr"
+              lang="en"
               value={form.sort_order}
               onChange={(e) => set("sort_order", Number(e.target.value))}
             />
