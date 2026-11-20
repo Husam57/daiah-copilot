@@ -13,14 +13,14 @@ from postgrest.exceptions import APIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import redact, settings
-from .routers import admin_posts, admin_sections, auth, public
+from .routers import admin_ai, admin_misc, admin_posts, admin_sections, auth, chat, public
 
 log = logging.getLogger("daiah")
 
 app = FastAPI(
     title="رفيق الداعية — API",
     description="لوحة التحكم + الموقع العام + المساعد. الردود الشرعية من المواد المعتمدة حرفياً.",
-    version="0.3.0",
+    version="0.5.0",
 )
 
 app.add_middleware(
@@ -34,7 +34,11 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(admin_sections.router)
 app.include_router(admin_posts.router)
+app.include_router(admin_ai.router)
+app.include_router(admin_misc.centers)
+app.include_router(admin_misc.dashboard)
 app.include_router(public.router)
+app.include_router(chat.router)
 
 
 @app.get("/api/health", tags=["system"], summary="فحص عمل الخادم")
