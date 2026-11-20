@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ForceArabic } from "@/components/site/force-locale";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      <ForceArabic />
+      {children}
+    </AuthProvider>
+  );
 }

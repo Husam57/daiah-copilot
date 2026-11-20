@@ -1,17 +1,50 @@
 "use client";
 
-import { BadgeCheck, Building2, Compass, ExternalLink, Globe, Mail, SearchX } from "lucide-react";
+import { Building2, ExternalLink, Globe, Mail, SearchX, ShieldCheck } from "lucide-react";
 import * as React from "react";
+import { BookIcon } from "@/components/brand";
 import type { ReferralCenter } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Button } from "./button";
 import { SafeHtml } from "./safe-html";
 
 /* ============================================================
    صوت المنصة مقابل صوت المساعد — يجب أن يميّزهما المستخدم من النظرة الأولى.
+   التسميات افتراضياً بالعربية، ويمرّر الموقع العام التسميات الإنجليزية عند الحاجة.
    ============================================================ */
 
-/** ⭐ بطاقة "نص معتمد": نص المنشور حرفياً (منظّف) مع مصدره. */
+export interface AnswerLabels {
+  approvedHeader: string;
+  sourcePrefix: string;
+  originalLink: string;
+  readFull: string;
+  langFallbackNote: string;
+  fallbackTitle: string;
+  closest: string;
+  read: string;
+  centers: string;
+  visitSite: string;
+  noCenters: string;
+  bot: string;
+}
+
+export const AR_LABELS: AnswerLabels = {
+  approvedHeader: "نص معتمد من المنصة",
+  sourcePrefix: "المصدر: ",
+  originalLink: "الرابط الأصلي",
+  readFull: "اقرأ المادة كاملة",
+  langFallbackNote: "لا تتوفر نسخة إنجليزية من هذه المادة، فعُرض النص العربي.",
+  fallbackTitle: "هذه المسألة غير متوفرة في المنصة حالياً",
+  closest: "أقرب مادة ذات صلة",
+  read: "قراءة",
+  centers: "مراكز ودعاة معتمدون",
+  visitSite: "زيارة الموقع",
+  noCenters: "لم تُضف مراكز معتمدة بعد.",
+  bot: "رفيق الداعية",
+};
+
+const isInternal = (href: string) => href.startsWith("/");
+
+/** ⭐ بطاقة "نص معتمد": نص المنشور حرفياً (منظّف بـ DOMPurify) مع مصدره (Assistant.dc.html). */
 export function ApprovedTextCard({
   title,
   sectionName,
@@ -21,6 +54,8 @@ export function ApprovedTextCard({
   readMoreHref,
   lang = "ar",
   langFallback,
+  labels = AR_LABELS,
+  headingLevel = "h2",
   className,
 }: {
   title: string;
@@ -32,88 +67,93 @@ export function ApprovedTextCard({
   lang?: "ar" | "en";
   /** طُلبت الإنجليزية ولا توجد نسخة: يُعرض العربي */
   langFallback?: boolean;
+  labels?: AnswerLabels;
+  headingLevel?: "h2" | "h3";
   className?: string;
 }) {
   const dir = lang === "en" ? "ltr" : "rtl";
+  const H = headingLevel;
   return (
-    <article
-      className={cn("overflow-hidden rounded-lg border border-approved-border bg-primary-50", className)}
-      aria-label="نص معتمد من المنصة"
-    >
-      <header className="flex items-center justify-between gap-3 bg-primary-700 px-4 py-2.5 text-white">
-        <span className="inline-flex items-center gap-2 text-sm font-bold">
-          <BadgeCheck className="size-4.5" aria-hidden />
-          نص معتمد من المنصة
+    <article className={cn("overflow-hidden rounded-lg border border-approved-border bg-primary-50", className)} aria-label={labels.approvedHeader}>
+      <header className="flex flex-wrap items-center justify-between gap-2 bg-primary-700 px-[18px] py-3 text-sm font-bold text-white">
+        <span className="inline-flex items-center gap-2">
+          <ShieldCheck className="size-4" aria-hidden />
+          {labels.approvedHeader}
         </span>
         {sectionName && (
-          <span className="truncate text-xs font-medium text-white/85" lang={lang} dir={dir}>
+          <span className="min-w-0 truncate font-medium" lang={lang} dir={dir}>
             {sectionName}
           </span>
         )}
       </header>
-      <div className="px-5 py-5" lang={lang} dir={dir}>
-        {langFallback && (
-          <p className="mb-3 rounded-sm bg-surface px-2.5 py-1.5 text-xs text-text-secondary" lang="ar" dir="rtl">
-            لا تتوفر نسخة إنجليزية من هذه المادة، فعُرض النص العربي.
-          </p>
-        )}
-        <h3 className="text-h3 text-primary-700">{title}</h3>
-        <SafeHtml html={html} className="mt-3 text-body" />
+      <div className="flex flex-col gap-3 p-5" lang={lang} dir={dir}>
+        {langFallback && <p className="rounded-sm bg-surface px-2.5 py-1.5 text-xs text-text-secondary">{labels.langFallbackNote}</p>}
+        <H className="text-xl font-bold leading-[30px] text-primary-700">{title}</H>
+        <SafeHtml html={html} className="text-[17px] leading-8" />
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-approved-border px-5 py-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
-          <span className="min-w-0">
-            <span className="text-text-muted">المصدر: </span>
-            <span className="font-medium text-text">{sourceName || "—"}</span>
-          </span>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-approved-border px-5 py-3.5 text-sm text-text-secondary">
+        <span className="min-w-0">
+          {labels.sourcePrefix}
+          <span className="font-medium text-text">{sourceName || "—"}</span>
           {externalRef && (
-            <a
-              href={externalRef}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary-600 hover:underline"
-            >
-              <ExternalLink className="size-3.5" aria-hidden />
-              الرابط الأصلي
-            </a>
+            <>
+              {" · "}
+              <a href={externalRef} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold text-primary-600 hover:underline">
+                {labels.originalLink}
+                <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            </>
           )}
-        </div>
+        </span>
         {readMoreHref && (
-          <Button asChild variant="secondary" size="sm">
-            <a href={readMoreHref} target="_blank" rel="noopener noreferrer">
-              اقرأ المادة كاملة
-            </a>
-          </Button>
+          <a
+            href={readMoreHref}
+            {...(isInternal(readMoreHref) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+            className="inline-flex h-10 items-center rounded-[10px] border border-approved-border bg-surface px-4 font-bold text-primary-700 hover:bg-primary-100"
+          >
+            {labels.readFull}
+          </a>
         )}
       </footer>
     </article>
   );
 }
 
-/** فقاعة توجيه المساعد: نص قصير فقط. */
+/** صورة المساعد: مربع primary-100 بأيقونة كتاب. */
+export function AssistantAvatar({ className }: { className?: string }) {
+  return (
+    <span className={cn("grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-100 text-primary-600", className)} aria-hidden>
+      <BookIcon className="size-[18px]" />
+    </span>
+  );
+}
+
+/** فقاعة توجيه المساعد: نص قصير فقط (صوت المساعد، لا محتوى). */
 export function GuidanceBubble({
   text,
   lang = "ar",
+  withAvatar = true,
   className,
 }: {
   text: string;
   lang?: "ar" | "en";
+  withAvatar?: boolean;
   className?: string;
 }) {
+  const bubble = (
+    <p
+      className="self-start rounded-lg border border-border bg-surface px-4 py-3 text-base leading-7 text-text"
+      lang={lang}
+      dir={lang === "en" ? "ltr" : "rtl"}
+    >
+      {text}
+    </p>
+  );
+  if (!withAvatar) return <div className={cn("flex", className)}>{bubble}</div>;
   return (
-    <div className={cn("flex items-start gap-2.5", className)}>
-      <span
-        className="mt-1 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary-600"
-        aria-hidden
-      >
-        <Compass className="size-4" />
-      </span>
-      <div className="max-w-prose rounded-lg rounded-ss-sm border border-border bg-surface px-4 py-2.5 shadow-sm">
-        <p className="text-xs text-text-muted">رفيق الداعية</p>
-        <p className="text-body text-text" lang={lang} dir={lang === "en" ? "ltr" : "rtl"}>
-          {text}
-        </p>
-      </div>
+    <div className={cn("flex items-start gap-3", className)}>
+      <AssistantAvatar />
+      {bubble}
     </div>
   );
 }
@@ -149,14 +189,16 @@ export function SourceChip({
       </span>
       <span className="min-w-0 flex-1 truncate text-sm text-text">{title}</span>
       {pct !== null && (
-        <span className="flex shrink-0 items-center gap-1.5" aria-label={`نسبة التشابه ${pct}%`}>
+        <span className="flex shrink-0 items-center gap-1.5" aria-label={`${pct}%`}>
           <span className="h-1.5 w-10 overflow-hidden rounded-full bg-surface-muted" aria-hidden>
             <span
               className={cn("block h-full rounded-full", muted ? "bg-text-muted" : "bg-primary-500")}
               style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
             />
           </span>
-          <span className="w-8 text-xs tabular-nums text-text-secondary">{pct}%</span>
+          <span className="w-8 text-xs tabular-nums text-text-secondary" dir="ltr">
+            {pct}%
+          </span>
         </span>
       )}
     </>
@@ -187,23 +229,23 @@ export function FallbackCard({
   referrals,
   className,
   lang = "ar",
+  labels = AR_LABELS,
 }: {
   message?: string;
   closest?: { title: string; similarity?: number | null; href?: string } | null;
   referrals: ReferralCenter[];
   className?: string;
   lang?: "ar" | "en";
+  labels?: AnswerLabels;
 }) {
   return (
-    <section className={cn("rounded-lg border border-border bg-surface-muted p-5", className)} aria-live="polite">
+    <section className={cn("flex flex-col gap-4 rounded-lg border border-border bg-surface-muted p-5", className)}>
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-text-secondary">
-          <SearchX className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <h3 className="text-h3 text-text">هذه المسألة غير متوفرة في المنصة حالياً</h3>
+        <SearchX className="mt-0.5 size-6 shrink-0 text-warning" aria-hidden />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="text-[17px] font-bold leading-7">{labels.fallbackTitle}</h2>
           {message && (
-            <p className="mt-1 text-sm font-normal text-text-secondary" lang={lang} dir={lang === "en" ? "ltr" : "rtl"}>
+            <p className="text-[15px] leading-[26px] text-text-secondary" lang={lang} dir={lang === "en" ? "ltr" : "rtl"}>
               {message}
             </p>
           )}
@@ -211,20 +253,42 @@ export function FallbackCard({
       </div>
 
       {closest && (
-        <div className="mt-5">
-          <p className="mb-2 text-sm font-bold text-text">أقرب مادة ذات صلة</p>
-          <SourceChip index={1} title={closest.title} similarity={closest.similarity} href={closest.href} muted />
-        </div>
+        <a
+          href={closest.href}
+          className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3.5 text-text hover:border-approved-border"
+        >
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xs text-text-muted">{labels.closest}</span>
+            <span className="text-base font-bold">{closest.title}</span>
+          </span>
+          <span className="shrink-0 text-sm font-bold text-primary-600">{labels.read}</span>
+        </a>
       )}
 
-      <div className="mt-5">
-        <p className="mb-2 text-sm font-bold text-text">تواصل مع المراكز المعتمدة</p>
+      <div className="flex flex-col gap-2.5">
+        <span className="text-sm font-bold">{labels.centers}</span>
         {referrals.length === 0 ? (
-          <p className="text-sm font-normal text-text-muted">لم تُضف مراكز معتمدة بعد.</p>
+          <p className="text-sm text-text-muted">{labels.noCenters}</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5">
             {referrals.map((c) => (
-              <ReferralCard key={c.id} center={c} />
+              <div key={c.id} className="flex flex-col gap-1 rounded-md border border-border bg-surface px-4 py-3.5">
+                <span className="text-[15px] font-bold">{c.name}</span>
+                <span className="text-[13px] text-text-muted">
+                  {c.country}
+                  {c.country && c.url && " · "}
+                  {c.url && (
+                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:underline">
+                      {labels.visitSite}
+                    </a>
+                  )}
+                </span>
+                {c.contact && (
+                  <span className="truncate text-[13px] text-text-secondary" dir="auto">
+                    {c.contact}
+                  </span>
+                )}
+              </div>
             ))}
           </div>
         )}

@@ -259,3 +259,86 @@ export interface UnansweredGroup {
   lang: Lang | null;
   closest: { id: number; slug: string; title_ar: string; similarity: number | null } | null;
 }
+
+/* ============ الموقع العام (/api/*) ============ */
+export interface SectionRef {
+  name_ar: string;
+  name_en: string | null;
+  slug: string;
+  category: Category;
+}
+
+export interface PublicSection {
+  id: number;
+  parent_id: number | null;
+  name_ar: string;
+  name_en: string | null;
+  slug: string;
+  category: Category;
+  description: string | null;
+  sort_order: number;
+  posts_count: number;
+}
+
+export interface PublicPostCard {
+  id: number;
+  slug: string;
+  title_ar: string;
+  title_en: string | null;
+  summary_ar: string | null;
+  excerpt: string;
+  excerpt_en: string | null;
+  tags: string[];
+  topic: string | null;
+  content_type: ContentType;
+  file_url: string | null;
+  source_name: string | null;
+  published_at: string | null;
+  has_en: boolean;
+  reading_minutes: number;
+  reading_minutes_en: number | null;
+  section: SectionRef | null;
+}
+
+export interface PublicPostPage {
+  items: PublicPostCard[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface PublicPost {
+  id: number;
+  slug: string;
+  section_id: number;
+  title_ar: string;
+  title_en: string | null;
+  content_ar: string;
+  content_en: string | null;
+  summary_ar: string | null;
+  tags: string[];
+  external_ref: string | null;
+  topic: string | null;
+  source_name: string | null;
+  content_type: ContentType;
+  file_url: string | null;
+  published_at: string | null;
+  updated_at: string;
+  reading_minutes: number;
+  reading_minutes_en: number | null;
+  section: SectionRef;
+}
+
+export interface PublicCategoryCount {
+  category: Category;
+  posts_count: number;
+  sections_count: number;
+}
+
+export interface PublicTopic {
+  topic: string;
+  posts_count: number;
+}
+
+/** رد POST /api/chat (نفس AgentResponse + العتبة + log_id، وفي البدائل المصادر أيضاً). */
+export type ChatResponse = AgentResponse & { threshold: number; log_id: number; sources?: SourceBrief[] };

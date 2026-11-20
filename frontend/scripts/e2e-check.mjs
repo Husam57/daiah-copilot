@@ -2,10 +2,13 @@
 /**
  * فحص شامل للوحة التحكم (Node 20+ بلا مكتبات إضافية).
  *
- * 1) كل صفحات /admin (و / و /design-system) ترجع 200 و <html lang="ar" dir="rtl">.
+ * 1) كل صفحات /admin والموقع العام ترجع 200 و <html lang="ar" dir="rtl">، وبكوكي daiah.lang=en
+ *    يصير الموقع lang="en" dir="ltr" بينما تبقى اللوحة عربية. ومسار غير موجود يرجع 404 بنفس الهوية.
  * 2) السيناريو عبر نفس الـ API الذي تستخدمه الواجهة:
  *    دخول ← إنشاء قسم ← إنشاء منشور ← إرسال للمراجعة ← نشره ← ظهوره مفهرساً ←
- *    اختباره في المختبر (match + النص حرفياً) ← حذفه (ثم حذف القسم).
+ *    اختباره في المختبر (match + النص حرفياً) ← يظهر في المكتبة ← صفحته ←
+ *    سؤال عنه في /api/chat (match بنص مطابق حرفياً) ← سؤال بعيد (fallback) ← حذفه (ثم حذف القسم).
+ *    سجلات المحادثة تُكتب بـ session_id = E2E_SESSION، ويحذفها e2e_run.py بعد الانتهاء.
  *
  * المتطلبات: الـ Backend يعمل (افتراضياً :8000) والواجهة تعمل (افتراضياً :3000).
  * بيانات الدخول: E2E_EMAIL / E2E_PASSWORD (لا تُطبع أبداً). الأسهل: من مجلد backend
@@ -69,19 +72,29 @@ async function call(method, path, body) {
 
 const info = (r) => `HTTP ${r.status}${r.data?.detail ? `: ${typeof r.data.detail === "string" ? r.data.detail : JSON.stringify(r.data.detail)}` : ""}`;
 
-async function checkPage(path) {
+async function fetchPage(path, lang) {
+  const res = await fetch(`${FRONTEND}${path}`, { redirect: "manual", headers: lang ? { Cookie: `daiah.lang=${lang}` } : {} });
+  return { status: res.status, html: await res.text() };
+}
+
+async function checkPage(path, { lang = "ar", status = 200, contains, skipDir = false } = {}) {
+  const cookie = lang === "en" || path.startsWith("/admin") ? lang : undefined;
+  const label = `صفحة ${path}${lang === "en" ? " (English)" : ""}`;
   try {
-    const res = await fetch(`${FRONTEND}${path}`, { redirect: "manual" });
-    const html = await res.text();
-    const rtl = /<html[^>]*lang="ar"[^>]*dir="rtl"/.test(html);
-    return step(`صفحة ${path}`, res.status === 200 && rtl, `HTTP ${res.status}${rtl ? "" : " (بدون lang=ar dir=rtl)"}`);
+    const r = await fetchPage(path, cookie);
+    const want = lang === "en" && !path.startsWith("/admin") ? /<html[^>]*lang="en"[^>]*dir="ltr"/ : /<html[^>]*lang="ar"[^>]*dir="rtl"/;
+    const okDir = skipDir || want.test(r.html);
+    const okText = !contains || r.html.includes(contains);
+    return step(label, r.status === status && okDir && okText,
+      `HTTP ${r.status}${okDir ? "" : " (lang/dir غير صحيح)"}${okText ? "" : " (النص غير موجود)"}`);
   } catch (e) {
-    return step(`صفحة ${path}`, false, e.message);
+    return step(label, false, e.message);
   }
 }
 
+const PUBLIC_PAGES = ["/", "/assistant", "/library", "/shubuhat", "/intro", "/new-muslim"];
 const STATIC_PAGES = [
-  "/",
+  ...PUBLIC_PAGES,
   "/design-system",
   "/admin/login",
   "/admin",
@@ -115,6 +128,8 @@ const POST = {
   content_type: "article",
 };
 const QUESTION = "كم مرة أسقي نبات الصبار في الشتاء؟";
+const FAR_QUESTION = "ما هي عاصمة أستراليا؟";
+const SESSION = process.env.E2E_SESSION || `e2e-${TAG}`;
 
 async function scenario() {
   const created = { section: null, post: null };
@@ -209,8 +224,42 @@ async function scenario() {
     // صفحات المحرر والمراجعة الديناميكية
     await checkPage(`/admin/posts/${id}`);
     await checkPage(`/admin/review/${id}`);
+
+    // 7) الموقع العام: المكتبة ← صفحة المادة ← المساعد
+    const slug = (await call("GET", `/api/admin/posts/${id}`)).data?.slug;
+    r = await call("GET", `/api/posts?q=${encodeURIComponent(TAG)}`);
+    step("المكتبة (API): المنشور يظهر", r.status === 200 && r.data?.items?.some((p) => p.slug === slug && p.reading_minutes >= 1), info(r));
+    await checkPage(`/library?q=${encodeURIComponent(TAG)}`, { contains: POST.title_ar });
+    r = await call("GET", `/api/posts/${slug}`);
+    step("صفحة المادة (API): النص حرفياً", r.status === 200 && r.data?.content_ar === POST.content_ar && r.data?.content_en === POST.content_en, info(r));
+    await checkPage(`/posts/${slug}`, { contains: POST.title_ar });
+    await checkPage(`/posts/${slug}`, { lang: "en", contains: POST.title_en });
+    r = await call("GET", `/api/posts/${slug}/related`);
+    step("مواد ذات صلة (API)", r.status === 200 && Array.isArray(r.data) && !r.data.some((p) => p.slug === slug), info(r));
+
+    r = await call("POST", "/api/chat", { message: QUESTION, lang: "ar", session_id: SESSION });
+    step(
+      "المساعد /api/chat: match بالمنشور الصحيح",
+      r.status === 200 && r.data?.type === "match" && r.data?.post?.id === id,
+      r.status === 200 ? `type=${r.data?.type}, threshold=${r.data?.threshold}` : info(r),
+    );
+    if (r.data?.type === "match") {
+      step("المساعد: النص = content_ar حرفياً", r.data.post.content === POST.content_ar);
+      step("المساعد: المصادر بدرجاتها + العتبة + log_id",
+        Array.isArray(r.data.sources) && r.data.sources.every((x) => typeof x.similarity === "number") && typeof r.data.threshold === "number" && r.data.log_id > 0);
+      const fb = await call("POST", "/api/chat/feedback", { log_id: r.data.log_id, helpful: true });
+      step("المساعد: تقييم «مفيد»", fb.status === 200, info(fb));
+    }
+    r = await call("POST", "/api/chat", { message: QUESTION, lang: "en", session_id: SESSION });
+    step("المساعد (English): content_en حرفياً", r.status === 200 && r.data?.type === "match" && r.data.post.content === POST.content_en, info(r));
+    r = await call("POST", "/api/chat", { message: FAR_QUESTION, lang: "ar", session_id: SESSION });
+    step(
+      "المساعد: سؤال بعيد ← fallback مع المراكز والعتبة",
+      r.status === 200 && r.data?.type === "fallback" && Array.isArray(r.data?.referrals) && typeof r.data?.threshold === "number" && !r.data?.post,
+      r.status === 200 ? `type=${r.data?.type}` : info(r),
+    );
   } finally {
-    // 7) الحذف
+    // 8) الحذف
     if (created.post) {
       r = await call("DELETE", `/api/admin/posts/${created.post}`);
       step("حذف المنشور", r.status === 200, info(r));
@@ -218,6 +267,8 @@ async function scenario() {
       step("المنشور لم يعد موجوداً", r.status === 404, info(r));
       r = await call("GET", "/api/admin/ai/index-status");
       step("ومقاطعه حُذفت من الفهرس", r.status === 200 && !r.data?.items?.some((i) => i.post_id === created.post), info(r));
+      r = await call("GET", `/api/posts?q=${encodeURIComponent(TAG)}`);
+      step("ولم يعد في المكتبة", r.status === 200 && r.data?.total === 0, info(r));
     }
     if (created.section) {
       r = await call("DELETE", `/api/admin/sections/${created.section}`);
@@ -239,6 +290,11 @@ async function main() {
 
   console.log("\n— الصفحات —");
   for (const p of STATIC_PAGES) await checkPage(p);
+  for (const p of PUBLIC_PAGES) await checkPage(p, { lang: "en" });
+  await checkPage("/admin/login", { lang: "en" }); // اللوحة تبقى عربية حتى مع كوكي الإنجليزية
+  await checkPage(`/no-such-page-${TAG}`, { status: 404 });
+  // notFound() داخل الصفحة: Next يرسل غلافاً مبسطاً ثم يرسم 404 بالهوية نفسها (lang/dir يضبطها العميل)
+  await checkPage(`/posts/no-such-post-${TAG}`, { status: 404, skipDir: true, contains: "الصفحة غير موجودة" });
 
   console.log("\n— السيناريو عبر الـ API —");
   await scenario();
