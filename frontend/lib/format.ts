@@ -1,8 +1,17 @@
 import type { ActivityType, Category, ContentType, IndexState, PostStatus } from "./types";
 
+/** أسماء المسارات كاملة (نماذج الأقسام). */
 export const CATEGORY_LABELS: Record<Category, string> = {
-  methodology: "المنهجية الدعوية",
-  shubuhat: "الشبهات",
+  methodology: "أساليب ومنهجية الدعوة",
+  shubuhat: "موسوعة الشبهات والردود",
+  intro_islam: "مواد التعريف بالإسلام",
+  new_muslim: "حقيبة المسلم الجديد",
+};
+
+/** أسماء مختصرة للجداول والشارات. */
+export const CATEGORY_SHORT: Record<Category, string> = {
+  methodology: "أساليب الدعوة",
+  shubuhat: "موسوعة الشبهات",
   intro_islam: "التعريف بالإسلام",
   new_muslim: "المسلم الجديد",
 };
@@ -41,16 +50,16 @@ const dateFmt = new Intl.DateTimeFormat("ar", {
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-  numberingSystem: "latn",
 });
 const shortDateFmt = new Intl.DateTimeFormat("ar", {
   year: "numeric",
   month: "short",
   day: "numeric",
-  numberingSystem: "latn",
 });
 const relFmt = new Intl.RelativeTimeFormat("ar", { numeric: "auto", style: "long" });
-const numFmt = new Intl.NumberFormat("ar", { numberingSystem: "latn" });
+// الأرقام في النص العربي بالأرقام العربية (١٢٣) كما في التصميم المعتمد؛ الدرجات/العتبة تبقى لاتينية.
+const numFmt = new Intl.NumberFormat("ar");
+const pctFmt = new Intl.NumberFormat("ar", { style: "percent", maximumFractionDigits: 0 });
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -84,11 +93,11 @@ export function formatNumber(n: number | null | undefined): string {
 
 export function formatPercent(ratio: number | null | undefined, digits = 0): string {
   if (ratio === null || ratio === undefined) return "—";
-  return `${(ratio * 100).toFixed(digits)}%`;
+  return digits === 0 ? pctFmt.format(ratio) : `${(ratio * 100).toFixed(digits)}%`;
 }
 
 export function formatScore(s: number | null | undefined): string {
-  return s === null || s === undefined ? "—" : s.toFixed(3);
+  return s === null || s === undefined ? "—" : s.toFixed(2);
 }
 
 /** حالة فهرسة منشور من بيانات القائمة (نفس منطق /ai/index-status: هامش 30 ث). */

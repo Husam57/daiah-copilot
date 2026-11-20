@@ -18,10 +18,10 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}>
-      <div className="min-w-0">
-        <h1 className="text-h1-mobile text-text md:text-h1">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-body text-text-secondary">{description}</p>}
+    <div className={cn("mb-5 flex flex-wrap items-end justify-between gap-4", className)}>
+      <div className="flex min-w-0 max-w-[640px] flex-col gap-1">
+        <h1 className="text-[26px] font-bold leading-[38px] text-text">{title}</h1>
+        {description && <p className="text-[15px] leading-[26px] text-text-secondary">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -33,7 +33,7 @@ export function TagsInput({
   id,
   value,
   onChange,
-  placeholder = "اكتب ثم اضغط Enter",
+  placeholder = "أضف وسماً",
   max = 20,
 }: {
   id: string;
@@ -57,17 +57,17 @@ export function TagsInput({
   };
 
   return (
-    <div className="flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-surface px-2 py-1.5 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500">
+    <div className="flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-[10px] border border-border bg-surface p-2 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500">
       {value.map((t) => (
         <span
           key={t}
-          className="inline-flex items-center gap-1 rounded-sm bg-primary-100 py-0.5 pe-1 ps-2 text-xs font-medium text-primary-700"
+          className="inline-flex items-center gap-1 rounded-sm bg-surface-muted py-1 pe-1 ps-2.5 text-[13px] text-text"
         >
           {t}
           <button
             type="button"
             onClick={() => onChange(value.filter((x) => x !== t))}
-            className="grid size-5 place-items-center rounded-sm hover:bg-primary-500/15"
+            className="grid size-5 place-items-center rounded-sm text-text-muted hover:bg-border hover:text-text"
             aria-label={`إزالة الوسم ${t}`}
           >
             <X className="size-3" aria-hidden />
@@ -91,8 +91,8 @@ export function TagsInput({
           }
         }}
         onBlur={() => add(draft)}
-        placeholder={value.length ? "" : placeholder}
-        className="h-7 min-w-24 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-text-muted"
+        placeholder={placeholder}
+        className="h-7 min-w-20 flex-1 bg-transparent px-1 text-[13px] outline-none placeholder:text-text-muted"
       />
     </div>
   );
@@ -142,7 +142,7 @@ export function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd
       dir="ltr"
-      className="inline-flex h-5 items-center rounded-[4px] border border-border bg-surface px-1.5 font-en text-[11px] font-medium text-text-muted"
+      className="inline-flex h-5 items-center rounded-[6px] border border-border px-1.5 font-en text-xs text-text-muted"
     >
       {children}
     </kbd>

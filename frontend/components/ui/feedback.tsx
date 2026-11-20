@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Info, RotateCw, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, RotateCw, XCircle } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -11,7 +11,7 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 /** بطاقة هيكلية جاهزة */
 export function CardSkeleton({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface p-5 shadow-sm", className)} aria-hidden>
+    <div className={cn("rounded-lg border border-border bg-surface p-5", className)} aria-hidden>
       <Skeleton className="h-5 w-1/3" />
       <div className="mt-4 space-y-2.5">
         {Array.from({ length: lines }, (_, i) => (
@@ -88,10 +88,10 @@ export function ErrorState({
 
 /* ---------- Alert ---------- */
 const ALERT_STYLES = {
-  info: { box: "border-info/20 bg-info-bg text-info", Icon: Info },
-  success: { box: "border-success/20 bg-success-bg text-success", Icon: CheckCircle2 },
-  warning: { box: "border-warning/25 bg-warning-bg text-warning-fg", Icon: AlertTriangle },
-  danger: { box: "border-danger/20 bg-danger-bg text-danger", Icon: XCircle },
+  info: { box: "bg-info-bg text-info-fg", Icon: Info },
+  success: { box: "bg-success-bg text-success-fg", Icon: CheckCircle2 },
+  warning: { box: "bg-warning-bg text-warning-fg", Icon: AlertTriangle },
+  danger: { box: "bg-danger-bg text-danger-fg", Icon: AlertCircle },
 } as const;
 
 export function Alert({
@@ -111,12 +111,12 @@ export function Alert({
   return (
     <div
       role={variant === "danger" ? "alert" : "status"}
-      className={cn("flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm", box, className)}
+      className={cn("flex items-start gap-2.5 rounded-md px-4 py-3 text-sm", box, className)}
     >
-      <span className="mt-0.5 shrink-0 [&_svg]:size-4">{icon ?? <Icon aria-hidden />}</span>
+      <span className="mt-[3px] shrink-0 [&_svg]:size-[18px]">{icon ?? <Icon aria-hidden />}</span>
       <div className="min-w-0 flex-1">
         {title && <p className="font-bold">{title}</p>}
-        {children && <div className={cn("font-normal text-text", title && "mt-0.5")}>{children}</div>}
+        {children && <div className={cn("font-normal", title && "mt-0.5")}>{children}</div>}
       </div>
     </div>
   );
@@ -132,11 +132,11 @@ export function ProgressBar({ value, className, label }: { value?: number; class
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={indeterminate ? undefined : Math.round(value)}
-      className={cn("h-2 w-full overflow-hidden rounded-full bg-surface-muted", className)}
+      className={cn("h-2 w-full overflow-hidden rounded-full bg-track", className)}
     >
       <div
         className={cn(
-          "h-full rounded-full bg-primary-600 transition-[width] duration-200 ease-out",
+          "h-full rounded-full bg-primary-700 transition-[width] duration-200 ease-out",
           indeterminate && "w-2/5 animate-indeterminate",
         )}
         style={indeterminate ? undefined : { width: `${Math.max(0, Math.min(100, value))}%` }}

@@ -26,22 +26,29 @@
 
   /* الحدود */
   --color-border: #e7e5df;
+  --color-border-subtle: #f0efea; /* فواصل الصفوف داخل البطاقات */
+  --color-border-strong: #d5d3cc; /* حدود متقطعة/دوائر الخطوات غير المكتملة */
+  --color-track: #edece7; /* مسار أشرطة التقدم */
 
   /* النصوص */
   --color-text: #1c1f1e;
   --color-text-secondary: #5b625f;
-  --color-text-muted: #8a918d;
+  --color-text-muted: #6b726e;
+  --color-text-disabled: #a9b0ac; /* أيقونات معطلة/نقاط محايدة فقط (ليست لنص) */
 
   /* الحالات */
   --color-success: #1e7f4f;
   --color-success-bg: #e6f4ec;
+  --color-success-fg: #17633d; /* نص على success-bg */
   --color-warning: #b7791f;
   --color-warning-bg: #fdf3e1;
   --color-warning-fg: #8a5a12; /* نص على warning-bg بتباين AA (اللون الأصلي 3.3:1 فقط) */
   --color-danger: #b4362f;
   --color-danger-bg: #fbeae8;
+  --color-danger-fg: #8f2a24; /* نص على danger-bg */
   --color-info: #2563a6;
   --color-info-bg: #e8f0fa;
+  --color-info-fg: #1f548d; /* نص على info-bg */
 
   /* الخطوط */
   --font-sans: var(--font-tajawal), var(--font-inter), ui-sans-serif, system-ui, sans-serif;

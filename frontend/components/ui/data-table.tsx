@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -53,11 +52,11 @@ export function DataTable<T>({
   const rest = columns.filter((c) => c !== primary && !c.actions && !c.hideOnMobile);
 
   if (!loading && rows && rows.length === 0 && empty) {
-    return <div className={cn("rounded-lg border border-border bg-surface shadow-sm", className)}>{empty}</div>;
+    return <div className={cn("rounded-lg border border-border bg-surface", className)}>{empty}</div>;
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border bg-surface shadow-sm", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-surface", className)}>
       {/* سطح المكتب */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full border-collapse text-sm">
@@ -69,7 +68,7 @@ export function DataTable<T>({
                   key={c.key}
                   scope="col"
                   className={cn(
-                    "whitespace-nowrap px-4 py-3 text-start text-xs font-bold text-text-secondary",
+                    "whitespace-nowrap px-[18px] py-3 text-start text-sm font-bold text-text-secondary",
                     c.headerClassName,
                   )}
                 >
@@ -81,9 +80,9 @@ export function DataTable<T>({
           <tbody>
             {loading
               ? Array.from({ length: skeletonRows }, (_, i) => (
-                  <tr key={i} className="border-t border-border">
+                  <tr key={i} className="border-t border-border-subtle">
                     {columns.map((c) => (
-                      <td key={c.key} className="px-4 py-3.5">
+                      <td key={c.key} className="px-[18px] py-3.5">
                         <Skeleton className={cn("h-4", c.primary ? "w-48" : "w-20")} />
                       </td>
                     ))}
@@ -94,14 +93,14 @@ export function DataTable<T>({
                     key={rowKey(row)}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
-                      "border-t border-border transition-colors duration-150 hover:bg-bg",
+                      "border-t border-border-subtle transition-colors duration-150 hover:bg-bg",
                       onRowClick && "cursor-pointer",
                     )}
                   >
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className={cn("px-4 py-3 align-middle", c.className)}
+                        className={cn("px-[18px] py-3.5 align-middle", c.className)}
                         onClick={c.actions ? (e) => e.stopPropagation() : undefined}
                       >
                         {c.cell(row)}
@@ -114,7 +113,7 @@ export function DataTable<T>({
       </div>
 
       {/* الجوال: بطاقات */}
-      <ul className="divide-y divide-border md:hidden">
+      <ul className="divide-y divide-border-subtle md:hidden">
         {loading
           ? Array.from({ length: Math.min(skeletonRows, 4) }, (_, i) => (
               <li key={i} className="space-y-2.5 p-4">
@@ -186,11 +185,10 @@ export function Pagination({
           onClick={() => onPageChange(page - 1)}
           aria-label="الصفحة السابقة"
         >
-          <ChevronLeft className="rtl:-scale-x-100" aria-hidden />
           السابق
         </Button>
-        <span className="px-1 tabular-nums">
-          {formatNumber(page)} / {formatNumber(pages)}
+        <span className="sr-only">
+          الصفحة {formatNumber(page)} من {formatNumber(pages)}
         </span>
         <Button
           variant="secondary"
@@ -200,7 +198,6 @@ export function Pagination({
           aria-label="الصفحة التالية"
         >
           التالي
-          <ChevronRight className="rtl:-scale-x-100" aria-hidden />
         </Button>
       </div>
     </nav>

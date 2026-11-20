@@ -1,18 +1,19 @@
 import { Check } from "lucide-react";
 import * as React from "react";
+import { formatNumber } from "@/lib/format";
 import type { HealthState, IndexState, PostStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./feedback";
 
 /* ---------- StatusDot ---------- */
 const DOT = {
-  ok: { color: "bg-success", ring: "ring-success/20", label: "متصل" },
-  warning: { color: "bg-warning", ring: "ring-warning/20", label: "يحتاج تحديث" },
-  down: { color: "bg-danger", ring: "ring-danger/20", label: "غير متصل" },
-  unknown: { color: "bg-text-muted", ring: "ring-text-muted/20", label: "غير معروف" },
+  ok: { dot: "bg-success", ink: "text-success-fg", label: "متصل" },
+  warning: { dot: "bg-warning", ink: "text-warning-fg", label: "يحتاج تحديث" },
+  down: { dot: "bg-danger", ink: "text-danger-fg", label: "غير متصل" },
+  unknown: { dot: "bg-text-disabled", ink: "text-text-muted", label: "غير معروف" },
 } as const;
 
-/** نقطة 8px + نص دائماً (لا يُعتمد على اللون وحده). */
+/** نقطة 8px + نص بلون الحالة (لا يُعتمد على اللون وحده). */
 export function StatusDot({
   state,
   label,
@@ -24,20 +25,30 @@ export function StatusDot({
 }) {
   const d = DOT[state];
   return (
-    <span className={cn("inline-flex items-center gap-2 text-sm", className)}>
-      <span className={cn("size-2 shrink-0 rounded-full ring-4", d.color, d.ring)} aria-hidden />
+    <span className={cn("inline-flex items-center gap-2 text-[13px] font-bold", d.ink, className)}>
+      <span className={cn("size-2 shrink-0 rounded-full", d.dot)} aria-hidden />
       <span>{label ?? d.label}</span>
     </span>
   );
 }
 
 /* ---------- StatCard ---------- */
+const TONES = {
+  primary: "bg-primary-100 text-primary-700",
+  success: "bg-success-bg text-success-fg",
+  warning: "bg-warning-bg text-warning-fg",
+  info: "bg-info-bg text-info-fg",
+  danger: "bg-danger-bg text-danger-fg",
+} as const;
+
+/** بطاقة إحصاء: أيقونة في دائرة ملونة، الرقم 26px، ثم التسمية. */
 export function StatCard({
   icon,
   label,
   value,
   hint,
   change,
+  tone = "primary",
   highlight,
   loading,
   className,
@@ -47,34 +58,33 @@ export function StatCard({
   value: React.ReactNode;
   hint?: React.ReactNode;
   change?: { value: string; positive?: boolean };
+  tone?: keyof typeof TONES;
   /** رقم مميز باللون accent (بحذر) */
   highlight?: boolean;
   loading?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface p-4 shadow-sm sm:p-5", className)}>
-      <div className="flex flex-col items-start gap-3 sm:flex-row">
-        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-600 [&_svg]:size-5">
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-text-secondary">{label}</p>
-          {loading ? (
-            <Skeleton className="mt-2 h-7 w-16" />
-          ) : (
-            <p className={cn("mt-0.5 text-h2", highlight ? "text-accent-600" : "text-text")}>{value}</p>
-          )}
-          {(hint || change) && !loading && (
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-              {change && (
-                <span className={change.positive ? "text-success" : "text-danger"}>{change.value}</span>
-              )}
-              {hint}
-            </p>
-          )}
-        </div>
-      </div>
+    <div className={cn("flex flex-col gap-3 rounded-lg border border-border bg-surface p-[18px]", className)}>
+      <span className={cn("grid size-10 shrink-0 place-items-center rounded-full [&_svg]:size-[19px]", TONES[tone])}>
+        {icon}
+      </span>
+      {loading ? (
+        <Skeleton className="h-8 w-16" />
+      ) : (
+        <span className={cn("text-[26px] font-extrabold leading-8", highlight ? "text-accent-600" : "text-text")}>
+          {value}
+        </span>
+      )}
+      <span className="text-sm text-text-secondary">
+        {label}
+        {(hint || change) && !loading && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+            {change && <span className={change.positive ? "text-success-fg" : "text-danger-fg"}>{change.value}</span>}
+            {hint}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
@@ -87,7 +97,13 @@ const STEPS = [
   { key: "indexed", label: "مفهرس" },
 ] as const;
 
-/** مسودة ← قيد المراجعة ← منشور ← مفهرس. الحالية ممتلئة، المكتملة بعلامة صح. */
+/** لون الخطوة الحالية حسب الحالة: مسودة (info) · مراجعة/بانتظار الفهرسة (warning). */
+const CURRENT_TONE = ["bg-info text-info-fg", "bg-warning text-warning-fg", "bg-success text-success-fg", "bg-warning text-warning-fg"];
+
+/**
+ * مسودة ← قيد المراجعة ← منشور ← مفهرس، أفقياً في سطر واحد:
+ * المكتملة دائرة خضراء بعلامة صح، الحالية ممتلئة بلون الحالة، القادمة بحد رمادي.
+ */
 export function Stepper({
   status,
   indexState,
@@ -99,45 +115,44 @@ export function Stepper({
 }) {
   const current = status === "draft" ? 0 : status === "review" ? 1 : indexState === "indexed" ? 3 : 2;
   const allDone = status === "published" && indexState === "indexed";
+  // منشور وغير مفهرس: الحالية هي «مفهرس» (بانتظار الفهرسة)
+  const active = status === "published" && !allDone ? 3 : current;
   return (
-    <ol className={cn("flex w-full items-start", className)} aria-label="مراحل سير العمل">
+    <ol
+      className={cn("m-0 flex list-none flex-wrap items-center gap-2 p-0 text-[13px] font-bold", className)}
+      aria-label="مراحل المنشور"
+    >
       {STEPS.map((s, i) => {
-        const done = i < current || (allDone && i === current);
-        const active = i === current && !allDone;
+        const done = allDone || i < active;
+        const isActive = i === active && !allDone;
+        const [bg, ink] = CURRENT_TONE[i].split(" ");
         return (
-          <li key={s.key} className="relative flex flex-1 flex-col items-center text-center">
+          <React.Fragment key={s.key}>
             {i > 0 && (
-              <span
-                aria-hidden
-                className={cn(
-                  "absolute top-3.5 h-0.5 -translate-y-1/2",
-                  i <= current ? "bg-primary-600" : "bg-border",
-                )}
-                style={{ insetInlineEnd: "50%", marginInlineEnd: "14px", width: "calc(100% - 28px)" }}
-              />
+              <li aria-hidden className={cn("h-0.5 w-6", i <= active || allDone ? "bg-success" : "bg-border")} />
             )}
-            <span
-              aria-current={active ? "step" : undefined}
+            <li
+              aria-current={isActive ? "step" : undefined}
               className={cn(
-                "relative z-10 grid size-7 place-items-center rounded-full border-2 text-xs font-bold",
-                done && "border-primary-600 bg-primary-600 text-white",
-                active && "border-primary-600 bg-primary-600 text-white ring-4 ring-primary-100",
-                !done && !active && "border-border bg-surface text-text-muted",
+                "flex items-center gap-1.5",
+                done ? "text-success-fg" : isActive ? ink : "text-text-muted",
               )}
             >
-              {done ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : i + 1}
-            </span>
-            <span
-              className={cn(
-                "mt-1.5 text-xs leading-4",
-                active ? "font-bold text-primary-700" : done ? "text-text" : "text-text-muted",
-              )}
-            >
+              <span
+                className={cn(
+                  "grid size-[22px] place-items-center rounded-full text-xs",
+                  done && "bg-success text-white",
+                  isActive && `${bg} text-white`,
+                  !done && !isActive && "border-2 border-border-strong",
+                )}
+              >
+                {done ? <Check className="size-[13px]" strokeWidth={3} aria-hidden /> : formatNumber(i + 1)}
+              </span>
               {s.label}
               {done && <span className="sr-only"> (مكتملة)</span>}
-              {active && <span className="sr-only"> (الحالية)</span>}
-            </span>
-          </li>
+              {isActive && <span className="sr-only"> (الحالية)</span>}
+            </li>
+          </React.Fragment>
         );
       })}
     </ol>

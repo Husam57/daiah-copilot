@@ -10,7 +10,7 @@ export function Card({ className, interactive, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-surface shadow-sm",
+        "rounded-lg border border-border bg-surface",
         interactive &&
           "transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md motion-reduce:hover:translate-y-0",
         className,
@@ -34,11 +34,11 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4", className)}>
+    <div className={cn("flex flex-wrap items-center justify-between gap-3 px-[22px] pb-2 pt-[22px]", className)}>
       <div className="flex min-w-0 items-start gap-3">
         {icon && <div className="mt-0.5 text-primary-600 [&_svg]:size-5">{icon}</div>}
         <div className="min-w-0">
-          <h2 className="text-body font-bold text-text">{title}</h2>
+          <h2 className="text-lg font-bold leading-7 text-text">{title}</h2>
           {description && <p className="mt-0.5 text-sm font-normal text-text-secondary">{description}</p>}
         </div>
       </div>
@@ -48,5 +48,5 @@ export function CardHeader({
 }
 
 export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5", className)} {...props} />;
+  return <div className={cn("p-[22px]", className)} {...props} />;
 }

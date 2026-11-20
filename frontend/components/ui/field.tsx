@@ -9,6 +9,8 @@ interface FieldProps {
   hint?: React.ReactNode;
   error?: string | null;
   required?: boolean;
+  /** يُلحق «(اختياري)» بالتسمية */
+  optional?: boolean;
   /** عنصر بجانب التسمية (عدّاد أحرف مثلاً) */
   aside?: React.ReactNode;
   className?: string;
@@ -16,7 +18,7 @@ interface FieldProps {
 }
 
 /** تسمية فوق الحقل، تلميح تحته، ورسالة خطأ حمراء مع أيقونة. */
-export function Field({ id, label, hint, error, required, aside, className, children }: FieldProps) {
+export function Field({ id, label, hint, error, required, optional, aside, className, children }: FieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
@@ -29,10 +31,11 @@ export function Field({ id, label, hint, error, required, aside, className, chil
     : children;
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-medium text-text">
+        <label htmlFor={id} className="text-sm font-bold text-text">
           {label}
+          {optional && <span className="ms-1 font-medium text-text-muted">(اختياري)</span>}
           {required && (
             <span className="ms-1 text-danger" aria-hidden>
               *
