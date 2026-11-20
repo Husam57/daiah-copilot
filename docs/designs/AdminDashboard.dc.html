@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>لوحة التحكم — الرئيسية</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 248px; max-width: 100%; display: flex">
+<dc-import name="AdminSidebar" active="home" hint-size="248px,1100px"></dc-import>
+</div>
+
+<main style="flex: 999 1 760px; min-width: 0; display: flex; flex-direction: column">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E7E5DF; padding: 14px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<span style="font-size: 14px; font-weight: 700">الرئيسية</span>
+<div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FAFAF7; color: #6B726E; font-size: 14px; min-width: 260px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B726E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<span style="flex: 1 1 auto">بحث سريع</span><span lang="en" style="font-size: 12px; padding: 2px 6px; border-radius: 6px; border: 1px solid #E7E5DF">Ctrl K</span>
+</div>
+</div>
+
+<div style="padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 24px; max-width: 1240px; box-sizing: border-box; width: 100%">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px"><h1 style="margin: 0; font-size: 28px; line-height: 40px; font-weight: 700">أهلاً، المدير</h1><span style="font-size: 15px; color: #5B625F">نظرة سريعة على المحتوى والمساعد.</span></div>
+<a href="/AdminEditor.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 12px; background: #0F4C47; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>منشور جديد</a>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="6">
+<div style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 999px; background: {{s.bg}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{s.ink}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{s.icon}}"></path></svg></span>
+<span style="font-size: 26px; font-weight: 800">[العدد]</span>
+<span style="font-size: 14px; color: #5B625F">{{s.label}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<section aria-label="حالة النظام" style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 18px; font-weight: 700">حالة النظام</h2><span style="font-size: 12px; color: #6B726E">آخر فحص: قبل دقيقة</span></div>
+<sc-for list="{{systems}}" as="x" hint-placeholder-count="4">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 12px; background: #FAFAF7">
+<span style="font-size: 15px; font-weight: 500">{{x.label}}</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: {{x.ink}}"><span style="width: 8px; height: 8px; border-radius: 999px; background: {{x.dot}}"></span>{{x.status}}</span>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="آخر النشاطات" style="flex: 2 1 420px; min-width: 0; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0 0 10px; font-size: 18px; font-weight: 700">آخر النشاطات</h2>
+<sc-for list="{{activity}}" as="a" hint-placeholder-count="5">
+<div style="display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #F0EFEA">
+<span style="flex: 0 0 auto; width: 10px; height: 10px; margin-top: 7px; border-radius: 999px; background: {{a.dot}}"></span>
+<span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">{{a.text}}</span><span style="font-size: 12px; color: #6B726E">{{a.when}}</span></span>
+</div>
+</sc-for>
+</section>
+</div>
+
+<section aria-label="أكثر الأسئلة غير المجابة" style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 18px; font-weight: 700">أكثر الأسئلة غير المجابة</h2><a href="/AdminUnanswered.dc.html" style="font-size: 14px; font-weight: 700; text-decoration: none">عرض الكل</a></div>
+<sc-for list="{{unanswered}}" as="u" hint-placeholder-count="3">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid #F0EFEA">
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 500">{{u.q}}</span><span style="font-size: 12px; color: #6B726E">تكرر [ن] مرات</span></span>
+<a href="/AdminEditor.dc.html" style="display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #CFE3DE; background: #F2F8F6; color: #0F4C47; font-size: 13px; font-weight: 700; text-decoration: none">أنشئ منشوراً</a>
+</div>
+</sc-for>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+const g = { bg: '#E3F1EE', ink: '#0F4C47' };
+const stats = [
+{ ...g, label: 'الأقسام', icon: 'M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z' },
+{ ...g, label: 'كل المنشورات', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6' },
+{ bg: '#E6F4EC', ink: '#17633D', label: 'منشورة', icon: 'M20 6 9 17l-5-5' },
+{ bg: '#FDF3E1', ink: '#8A5A12', label: 'قيد المراجعة', icon: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20M12 6v6l4 2' },
+{ bg: '#E8F0FA', ink: '#1F548D', label: 'أسئلة اليوم', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
+{ bg: '#FBEAE8', ink: '#8F2A24', label: 'نسبة غير المجابة', icon: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01' }
+];
+const ok = { ink: '#17633D', dot: '#1E7F4F', status: 'متصل' };
+const systems = [
+{ ...ok, label: 'قاعدة البيانات' },
+{ ...ok, label: 'Gemini API' },
+{ ink: '#8A5A12', dot: '#B7791F', status: 'يحتاج تحديث', label: 'فهرس المتجهات' },
+{ ...ok, label: 'المساعد' }
+];
+const activity = [
+{ dot: '#1E7F4F', text: 'نُشر منشور «مصدر القرآن الكريم» وفُهرس تلقائياً', when: 'قبل ١٠ دقائق' },
+{ dot: '#B7791F', text: 'أُرسل منشور «الوحي والنبوة» للمراجعة', when: 'قبل ساعة' },
+{ dot: '#2563A6', text: 'أُضيف منشور جديد كمسودة', when: 'قبل ساعتين' },
+{ dot: '#0F4C47', text: 'عُدّلت تعليمات أسلوب المساعد (الإصدار ٣)', when: 'أمس' },
+{ dot: '#0F4C47', text: 'أُعيد بناء فهرس قاعدة المعرفة', when: 'أمس' }
+];
+const unanswered = [
+{ q: 'ما حكم المشاركة في احتفالات غير المسلمين؟' },
+{ q: 'كيف أشرح مفهوم القدر لغير المسلم؟' },
+{ q: 'ما المادة المناسبة لمن يسأل عن الصيام؟' }
+];
+return { stats, systems, activity, unanswered };
+}
+}
+</script>
+</body>
+</html>

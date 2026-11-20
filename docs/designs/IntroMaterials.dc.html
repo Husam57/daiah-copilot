@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>رفيق الداعية — مواد التعريف بالإسلام</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%">
+<dc-import name="SiteHeader" active="intro" hint-size="100%,72px"></dc-import>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 48px 32px 96px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 8px; max-width: 640px">
+<h1 style="margin: 0; font-size: 34px; line-height: 46px; font-weight: 700">مواد التعريف بالإسلام</h1>
+<p style="margin: 0; font-size: 17px; line-height: 30px; color: #5B625F">كتيبات ومطويات ومقالات جاهزة للإهداء والمشاركة، بالعربية والإنجليزية.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<fieldset style="border: 0; margin: 0; padding: 4px; display: flex; gap: 4px; border-radius: 12px; background: #F4F3EF">
+<legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">اللغة</legend>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: Tajawal, sans-serif; font-size: 14px; color: #5B625F; cursor: pointer">الكل</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: Tajawal, sans-serif; font-size: 14px; color: #5B625F; cursor: pointer">العربية</button>
+<button type="button" aria-pressed="true" lang="en" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(16,24,20,0.08); font-family: Tajawal, sans-serif; font-size: 14px; font-weight: 700; color: #0F4C47; cursor: pointer">English</button>
+</fieldset>
+<fieldset style="border: 0; margin: 0; padding: 4px; display: flex; gap: 4px; border-radius: 12px; background: #F4F3EF">
+<legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">نوع المادة</legend>
+<button type="button" aria-pressed="true" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(16,24,20,0.08); font-family: Tajawal, sans-serif; font-size: 14px; font-weight: 700; color: #0F4C47; cursor: pointer">الكل</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: Tajawal, sans-serif; font-size: 14px; color: #5B625F; cursor: pointer">كتيبات</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: Tajawal, sans-serif; font-size: 14px; color: #5B625F; cursor: pointer">مطويات</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: Tajawal, sans-serif; font-size: 14px; color: #5B625F; cursor: pointer">مقالات</button>
+</fieldset>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px">
+<sc-for list="{{items}}" as="m" hint-placeholder-count="8">
+<article style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column">
+<div style="height: 150px; background: {{m.coverBg}}; display: flex; align-items: center; justify-content: center; position: relative">
+<svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="{{m.coverInk}}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{m.icon}}"></path></svg>
+<span style="position: absolute; top: 12px; inset-inline-start: 12px; padding: 3px 9px; border-radius: 7px; background: #FFFFFF; font-size: 12px; font-weight: 700; color: #1C1F1E">{{m.type}}</span>
+<span lang="en" style="position: absolute; top: 12px; inset-inline-end: 12px; padding: 3px 9px; border-radius: 7px; background: rgba(255,255,255,0.8); font-size: 12px; font-weight: 700; color: #1C1F1E">{{m.lang}}</span>
+</div>
+<div style="padding: 18px; display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto">
+<h2 style="margin: 0; font-size: 17px; line-height: 26px; font-weight: 700">{{m.title}}</h2>
+<p style="margin: 0; font-size: 14px; line-height: 24px; color: #5B625F">{{m.desc}}</p>
+<div style="display: flex; gap: 8px; margin-top: auto; padding-top: 10px">
+<a href="#" style="flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border-radius: 10px; background: #0F4C47; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none">{{m.cta}}</a>
+<button type="button" aria-label="نسخ رابط المادة للمشاركة" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E7E5DF; background: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1C1F1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg></button>
+</div>
+</div>
+</article>
+</sc-for>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+const book = 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5';
+const leaf = 'M3 4h6v16H3zM9 4h6v16H9zM15 4h6v16h-6z';
+const doc = 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5';
+const K = { type: 'كتيب', icon: book, coverBg: '#E3F1EE', coverInk: '#0F4C47', cta: 'تحميل PDF' };
+const L = { type: 'مطوية', icon: leaf, coverBg: '#F5EDE0', coverInk: '#7D6236', cta: 'تحميل PDF' };
+const A = { type: 'مقال', icon: doc, coverBg: '#E8F0FA', coverInk: '#1F548D', cta: 'قراءة' };
+const items = [
+{ ...K, lang: 'EN', title: 'خطواتك الأولى في الإسلام', desc: 'كتيب مبسط عن أركان الإسلام والإيمان.' },
+{ ...L, lang: 'EN', title: 'ما هو الإسلام؟', desc: 'مطوية تعريفية قصيرة جاهزة للإهداء.' },
+{ ...A, lang: 'EN', title: 'من هو النبي محمد ﷺ؟', desc: 'مقال تعريفي بسيرة النبي ﷺ للقارئ غير المسلم.' },
+{ ...K, lang: 'EN', title: 'القرآن الكريم: نظرة تعريفية', desc: 'كتيب يعرّف بالقرآن الكريم ومكانته.' },
+{ ...L, lang: 'EN', title: 'الإسلام والسلام', desc: 'مطوية عن قيم الرحمة والعدل في الإسلام.' },
+{ ...A, lang: 'EN', title: 'أسئلة شائعة عن الإسلام', desc: 'مقال يجيب عن أكثر الأسئلة تكراراً من مواد المنصة.' },
+{ ...K, lang: 'EN', title: 'المرأة في الإسلام', desc: 'كتيب معتمد عن مكانة المرأة وحقوقها.' },
+{ ...L, lang: 'EN', title: 'أركان الإسلام الخمسة', desc: 'مطوية مصورة مختصرة عن الأركان.' }
+];
+return { items };
+}
+}
+</script>
+</body>
+</html>

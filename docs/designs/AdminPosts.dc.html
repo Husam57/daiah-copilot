@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>لوحة التحكم — المنشورات</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 248px; max-width: 100%; display: flex">
+<dc-import name="AdminSidebar" active="posts" hint-size="248px,1100px"></dc-import>
+</div>
+
+<main style="flex: 999 1 760px; min-width: 0; display: flex; flex-direction: column">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E7E5DF; padding: 14px 32px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B726E">
+<span>المحتوى</span><span aria-hidden="true">/</span><span style="color: #1C1F1E; font-weight: 700">المنشورات</span>
+</div>
+
+<div style="padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px; max-width: 1240px; box-sizing: border-box; width: 100%">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px">
+<h1 style="margin: 0; font-size: 26px; line-height: 38px; font-weight: 700">المنشورات</h1>
+<a href="/AdminEditor.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 12px; background: #0F4C47; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>منشور جديد</a>
+</div>
+
+<div role="search" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px">
+<div style="flex: 1 1 260px; display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B726E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<label for="p-q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">ابحث في المنشورات</label>
+<input id="p-q" type="search" placeholder="ابحث بالعنوان..." style="flex: 1 1 auto; min-width: 0; border: 0; outline: none; font-family: Tajawal, sans-serif; font-size: 15px">
+</div>
+<select aria-label="القسم" style="height: 42px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px"><option>كل الأقسام</option></select>
+<select aria-label="الحالة" style="height: 42px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px"><option>كل الحالات</option><option>مسودة</option><option>قيد المراجعة</option><option>منشور</option></select>
+<select aria-label="النوع" style="height: 42px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px"><option>كل الأنواع</option><option>مقال</option><option>كتيب</option><option>مطوية</option><option>رد على شبهة</option></select>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; overflow-x: auto">
+<table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="background: #F4F3EF; color: #5B625F; text-align: start">
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">العنوان</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">القسم</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">النوع</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">الحالة</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">الفهرسة</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700">آخر تعديل</th>
+<th scope="col" style="padding: 12px 18px; text-align: start; font-weight: 700"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">إجراءات</span></th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<tr style="border-top: 1px solid #F0EFEA">
+<td style="padding: 14px 18px"><a href="/AdminEditor.dc.html" style="color: #1C1F1E; font-weight: 700; font-size: 15px; text-decoration: none">{{r.title}}</a></td>
+<td style="padding: 14px 18px; color: #5B625F">{{r.section}}</td>
+<td style="padding: 14px 18px; color: #5B625F">{{r.type}}</td>
+<td style="padding: 14px 18px"><span style="padding: 4px 10px; border-radius: 8px; background: {{r.stBg}}; color: {{r.stInk}}; font-size: 12px; font-weight: 700">{{r.status}}</span></td>
+<td style="padding: 14px 18px"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: {{r.ixInk}}"><span style="width: 8px; height: 8px; border-radius: 999px; background: {{r.ixDot}}"></span>{{r.index}}</span></td>
+<td style="padding: 14px 18px; color: #6B726E">[التاريخ]</td>
+<td style="padding: 14px 18px"><button type="button" aria-label="إجراءات المنشور" style="width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="#5B625F"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg></button></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; color: #5B625F">
+<span>عرض ١–٦ من [العدد]</span>
+<nav aria-label="ترقيم الصفحات" style="display: flex; gap: 6px">
+<a href="#" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #E7E5DF; background: #FFFFFF; color: #1C1F1E; display: flex; align-items: center; text-decoration: none">السابق</a>
+<a href="#" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #E7E5DF; background: #FFFFFF; color: #1C1F1E; display: flex; align-items: center; text-decoration: none">التالي</a>
+</nav>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+const S = {
+pub: { status: 'منشور', stBg: '#E6F4EC', stInk: '#17633D' },
+rev: { status: 'قيد المراجعة', stBg: '#FDF3E1', stInk: '#8A5A12' },
+dra: { status: 'مسودة', stBg: '#E8F0FA', stInk: '#1F548D' }
+};
+const X = {
+ok: { index: 'مفهرس', ixInk: '#17633D', ixDot: '#1E7F4F' },
+wait: { index: 'بانتظار الفهرسة', ixInk: '#8A5A12', ixDot: '#B7791F' },
+none: { index: 'غير مفهرس', ixInk: '#6B726E', ixDot: '#A9B0AC' }
+};
+const rows = [
+{ ...S.pub, ...X.ok, title: 'مصدر القرآن الكريم', section: 'موسوعة الشبهات', type: 'رد على شبهة' },
+{ ...S.pub, ...X.ok, title: 'التعريف بالألوهية أولاً', section: 'أساليب الدعوة', type: 'مقال' },
+{ ...S.rev, ...X.none, title: 'الوحي والنبوة', section: 'موسوعة الشبهات', type: 'رد على شبهة' },
+{ ...S.pub, ...X.wait, title: 'خطواتك الأولى في الإسلام', section: 'المسلم الجديد', type: 'كتيب' },
+{ ...S.dra, ...X.none, title: 'فن الحوار مع الآخر', section: 'أساليب الدعوة', type: 'مقال' },
+{ ...S.pub, ...X.ok, title: 'ما هو الإسلام؟', section: 'التعريف بالإسلام', type: 'مطوية' }
+];
+return { rows };
+}
+}
+</script>
+</body>
+</html>

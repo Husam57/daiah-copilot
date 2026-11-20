@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>رفيق الداعية — حقيبة المسلم الجديد</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%">
+<dc-import name="SiteHeader" active="newmuslim" hint-size="100%,72px"></dc-import>
+
+<section style="padding: 72px 32px 48px">
+<div style="max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+<span style="width: 64px; height: 64px; border-radius: 20px; background: #E3F1EE; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0F4C47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"></path></svg></span>
+<h1 style="margin: 0; font-size: 42px; line-height: 56px; font-weight: 800; color: #0F4C47">مرحباً بك في الإسلام</h1>
+<p style="margin: 0; font-size: 20px; line-height: 36px; color: #5B625F">خطوة بخطوة، وبهدوء. هذا مسار بسيط يرافقك في أيامك الأولى، ابدأ من أي خطوة تحتاجها.</p>
+</div>
+</section>
+
+<main style="max-width: 1080px; margin: 0 auto; padding: 0 32px 96px; display: flex; flex-direction: column; gap: 32px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+<a href="/Post.dc.html" style="text-decoration: none; color: #1C1F1E; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 20px; padding: 28px; display: flex; gap: 18px; align-items: flex-start; box-shadow: 0 1px 2px rgba(16,24,20,0.05)">
+<span style="flex: 0 0 auto; width: 48px; height: 48px; border-radius: 999px; background: #0F4C47; color: #FFFFFF; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center">{{s.n}}</span>
+<span style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 21px; line-height: 32px; font-weight: 700">{{s.title}}</span>
+<span style="font-size: 16px; line-height: 28px; color: #5B625F">{{s.desc}}</span>
+<span style="font-size: 14px; color: #6B726E">[العدد] مواد</span>
+</span>
+</a>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding: 28px; border-radius: 20px; background: #F2F8F6; border: 1px solid #CFE3DE">
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 560px">
+<span style="font-size: 20px; font-weight: 700; color: #0F4C47">عندك سؤال؟ لست وحدك</span>
+<span style="font-size: 16px; line-height: 28px; color: #5B625F">اسأل المساعد عن أي شيء يخطر لك، أو تواصل مع أحد المراكز المعتمدة القريبة منك.</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<a href="/Assistant.dc.html" style="display: inline-flex; align-items: center; height: 48px; padding: 0 22px; border-radius: 12px; background: #0F4C47; color: #FFFFFF; font-weight: 700; font-size: 16px; text-decoration: none">اسأل المساعد</a>
+<a href="#" style="display: inline-flex; align-items: center; height: 48px; padding: 0 22px; border-radius: 12px; border: 1px solid #CFE3DE; background: #FFFFFF; color: #0F4C47; font-weight: 700; font-size: 16px; text-decoration: none">المراكز المعتمدة</a>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+const steps = [
+{ n: '١', title: 'التعرف على الإسلام', desc: 'ما معنى أن تكون مسلماً، وما الذي تغيّر الآن.' },
+{ n: '٢', title: 'أركان الإسلام', desc: 'الشهادتان، والصلاة، والزكاة، والصيام، والحج.' },
+{ n: '٣', title: 'أركان الإيمان', desc: 'الإيمان بالله وملائكته وكتبه ورسله واليوم الآخر والقدر.' },
+{ n: '٤', title: 'الوضوء', desc: 'خطوات الوضوء ببساطة، مع صور توضيحية.' },
+{ n: '٥', title: 'الصلاة', desc: 'كيف تصلي، وأوقات الصلوات، وما تقوله فيها.' },
+{ n: '٦', title: 'إرشادات أساسية', desc: 'التعامل مع الأهل والمجتمع، وحلول التحديات الأولى.' }
+];
+return { steps };
+}
+}
+</script>
+</body>
+</html>

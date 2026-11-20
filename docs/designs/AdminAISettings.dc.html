@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>لوحة التحكم — الإعدادات والتعليمات</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 248px; max-width: 100%; display: flex">
+<dc-import name="AdminSidebar" active="settings" hint-size="248px,1100px"></dc-import>
+</div>
+
+<main style="flex: 999 1 760px; min-width: 0; display: flex; flex-direction: column">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E7E5DF; padding: 14px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<span style="display: flex; gap: 8px; font-size: 14px; color: #6B726E"><span>الذكاء الاصطناعي</span><span aria-hidden="true">/</span><span style="color: #1C1F1E; font-weight: 700">الإعدادات والتعليمات</span></span>
+<div style="display: flex; gap: 8px">
+<button type="button" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid #E7E5DF; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer">تجربة في المختبر</button>
+<button type="button" style="height: 40px; padding: 0 18px; border-radius: 12px; border: 0; background: #0F4C47; color: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer">حفظ كإصدار جديد</button>
+</div>
+</div>
+
+<div style="padding: 28px 32px 48px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; max-width: 1240px; box-sizing: border-box; width: 100%">
+
+<div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 26px; line-height: 38px; font-weight: 700">الإعدادات والتعليمات</h1>
+
+<section aria-label="القواعد الثابتة للنظام" style="border-radius: 16px; background: #F4F3EF; border: 1px solid #E7E5DF; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 34px; height: 34px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E7E5DF; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1C1F1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+<span style="display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 700">القواعد الثابتة للنظام</span><span style="font-size: 13px; color: #5B625F">مكتوبة في النظام ولا تتغير من هنا.</span></span>
+</div>
+<ul style="margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 26px; color: #1C1F1E">
+<li>لا يولّد المساعد أي رد شرعي أو فتوى أو حكم.</li>
+<li>يعرض نص المادة المعتمدة حرفياً مع مصدرها.</li>
+<li>يبحث في المنشورات المنشورة فقط.</li>
+<li>إذا لم تتجاوز أي مادة حد الارتباط، يحيل للمراكز المعتمدة.</li>
+</ul>
+</section>
+
+<section aria-label="تعليمات الأسلوب" style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px"><label for="guide" style="font-size: 16px; font-weight: 700">تعليمات الأسلوب</label><span style="padding: 3px 10px; border-radius: 8px; background: #E3F1EE; color: #0F4C47; font-size: 12px; font-weight: 700">الإصدار ٣ — مفعّل</span></div>
+<span style="font-size: 14px; color: #5B625F">تتحكم في نبرة جملة التوجيه فقط: الترحيب، والإيجاز، وأسلوب التدرج. لا تؤثر على محتوى المواد.</span>
+<textarea id="guide" rows="8" style="resize: vertical; padding: 14px; border: 1px solid #E7E5DF; border-radius: 12px; font-family: Tajawal, sans-serif; font-size: 15px; line-height: 28px; color: #1C1F1E">كن مختصراً وهادئاً ومشجعاً. خاطب الداعية بلطف، ووجّهه إلى المادة المناسبة بجملة واحدة. إذا كان السؤال عن بداية الحوار، ذكّره بالتدرج والبدء بالتوحيد.</textarea>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B726E"><span>آخر تعديل: [التاريخ] — المدير</span><span>[ع] / 2000 حرف</span></div>
+</section>
+
+<section aria-label="إعدادات الاسترجاع" style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">إعدادات الاسترجاع</h2>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><label for="thr" style="font-size: 14px; font-weight: 700">حد الارتباط (العتبة)</label><span style="font-size: 18px; font-weight: 800; color: #0F4C47" lang="en">0.59</span></div>
+<input id="thr" type="range" min="0.5" max="0.95" step="0.01" value="0.59" style="width: 100%; accent-color: #0F4C47">
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B726E"><span>أعلى = أدق وأقل نتائج</span><span>أقل = نتائج أكثر وأقل دقة</span></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<div style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 8px"><label for="topk" style="font-size: 14px; font-weight: 700">عدد النتائج المسترجعة</label><input id="topk" type="number" min="1" max="10" value="5" style="height: 44px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; font-family: Tajawal, sans-serif; font-size: 15px"></div>
+<div style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 700">النموذج</span><span style="height: 44px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FAFAF7; display: flex; align-items: center; justify-content: space-between; font-size: 14px"><span lang="en">Gemini Flash</span><span style="display: inline-flex; align-items: center; gap: 6px; color: #17633D; font-weight: 700; font-size: 13px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #1E7F4F"></span>متصل</span></span></div>
+</div>
+</section>
+
+<section aria-label="رسائل عدم التوفر" style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">رسالة عدم توفر المادة</h2>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="fb-ar" style="font-size: 14px; font-weight: 700">بالعربية</label><textarea id="fb-ar" rows="2" style="resize: vertical; padding: 12px; border: 1px solid #E7E5DF; border-radius: 10px; font-family: Tajawal, sans-serif; font-size: 15px; line-height: 26px">هذه المسألة غير متوفرة في المنصة حالياً. إليك أقرب مادة ذات صلة، ويمكنك الرجوع إلى المراكز المعتمدة.</textarea></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="fb-en" style="font-size: 14px; font-weight: 700">بالإنجليزية</label><textarea id="fb-en" rows="2" dir="ltr" lang="en" style="resize: vertical; padding: 12px; border: 1px solid #E7E5DF; border-radius: 10px; font-family: Tajawal, sans-serif; font-size: 15px; line-height: 26px">This topic is not yet covered on the platform. Here is the closest related material, and you can contact one of the approved centers.</textarea></div>
+</section>
+</div>
+
+<aside aria-label="سجل الإصدارات" style="flex: 1 1 280px; min-width: 0; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0 0 6px; font-size: 16px; font-weight: 700">سجل الإصدارات</h2>
+<sc-for list="{{versions}}" as="v" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: {{v.bg}}; border: 1px solid {{v.border}}">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{v.label}}</span><span style="font-size: 12px; color: #6B726E">{{v.meta}}</span></span>
+<sc-if value="{{v.restorable}}" hint-placeholder-val="{{ true }}"><button type="button" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #E7E5DF; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 12px; font-weight: 700; cursor: pointer">استرجاع</button></sc-if>
+<sc-if value="{{v.current}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 700; color: #0F4C47">الحالي</span></sc-if>
+</div>
+</sc-for>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+renderVals() {
+const versions = [
+{ label: 'الإصدار ٣', meta: '[التاريخ] · المدير · العتبة 0.59', current: true, restorable: false, bg: '#F2F8F6', border: '#CFE3DE' },
+{ label: 'الإصدار ٢', meta: '[التاريخ] · المدير · العتبة 0.75', current: false, restorable: true, bg: '#FFFFFF', border: '#F0EFEA' },
+{ label: 'الإصدار ١', meta: '[التاريخ] · الإعداد الأولي', current: false, restorable: true, bg: '#FFFFFF', border: '#F0EFEA' }
+];
+return { versions };
+}
+}
+</script>
+</body>
+</html>

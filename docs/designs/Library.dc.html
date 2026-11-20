@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>رفيق الداعية — المكتبة</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#14645C}a:hover{color:#0F4C47}
+</style>
+</helmet>
+<div dir="rtl" style="font-family: Tajawal, sans-serif; color: #1C1F1E; background: #FAFAF7; min-height: 100%">
+<dc-import name="SiteHeader" active="library" hint-size="100%,72px"></dc-import>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 48px 32px 88px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 34px; line-height: 46px; font-weight: 700">المكتبة الدعوية</h1>
+<p style="margin: 0; font-size: 17px; line-height: 30px; color: #5B625F">كل المواد المعتمدة في المنصة، مرتبة ومصنفة ومعها مصادرها.</p>
+</div>
+
+<form role="search" style="display: flex; flex-direction: column; gap: 16px">
+<label for="lib-q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">ابحث في المكتبة</label>
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px; background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; box-shadow: 0 1px 2px rgba(16,24,20,0.05)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B726E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-inline-start: 10px"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input id="lib-q" type="search" placeholder="ابحث بعنوان أو موضوع أو كلمة..." style="flex: 1 1 auto; min-width: 0; height: 48px; border: 0; outline: none; font-family: Tajawal, sans-serif; font-size: 17px; background: transparent; color: #1C1F1E">
+<button type="button" style="height: 46px; padding: 0 22px; border: 0; border-radius: 12px; background: #0F4C47; color: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">بحث</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<label for="f-section" style="font-size: 14px; font-weight: 700; color: #5B625F">تصفية:</label>
+<select id="f-section" style="height: 40px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; color: #1C1F1E"><option>كل الأقسام</option><option>أساليب ومنهجية الدعوة</option><option>موسوعة الشبهات والردود</option><option>مواد التعريف بالإسلام</option><option>حقيبة المسلم الجديد</option></select>
+<select aria-label="الموضوع" style="height: 40px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; color: #1C1F1E"><option>كل المواضيع</option></select>
+<select aria-label="اللغة" style="height: 40px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; color: #1C1F1E"><option>كل اللغات</option><option>العربية</option><option>English</option></select>
+<select aria-label="نوع المحتوى" style="height: 40px; padding: 0 12px; border: 1px solid #E7E5DF; border-radius: 10px; background: #FFFFFF; font-family: Tajawal, sans-serif; font-size: 14px; color: #1C1F1E"><option>كل الأنواع</option><option>مقال</option><option>كتيب</option><option>مطوية</option><option>رد على شبهة</option></select>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; border-radius: 999px; background: #E3F1EE; color: #0F4C47; font-size: 13px; font-weight: 700">موسوعة الشبهات والردود
+<button type="button" aria-label="إزالة الفلتر" style="width: 22px; height: 22px; border: 0; border-radius: 999px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F4C47" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span>
+<a href="#" style="font-size: 13px; font-weight: 700; text-decoration: none">مسح الكل</a>
+</div>
+</form>
+
+<div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #5B625F">
+<span>[العدد] نتيجة</span>
+<span>الترتيب: الأحدث</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px">
+<sc-for list="{{items}}" as="item" hint-placeholder-count="6">
+<article style="background: #FFFFFF; border: 1px solid #E7E5DF; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(16,24,20,0.05)">
+<div style="display: flex; flex-wrap: wrap; gap: 8px"><span style="padding: 4px 10px; border-radius: 8px; background: {{item.typeBg}}; color: {{item.typeColor}}; font-size: 12px; font-weight: 700">{{item.type}}</span><span style="padding: 4px 10px; border-radius: 8px; background: #F4F3EF; color: #5B625F; font-size: 12px; font-weight: 700">{{item.lang}}</span></div>
+<h2 style="margin: 0; font-size: 20px; line-height: 30px; font-weight: 700">{{item.title}}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 26px; color: #5B625F">{{item.summary}}</p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{item.tags}}" as="tag" hint-placeholder-count="2"><span style="padding: 2px 8px; border-radius: 6px; border: 1px solid #E7E5DF; font-size: 12px; color: #5B625F">{{tag}}</span></sc-for></div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid #F0EFEA; font-size: 13px; color: #6B726E"><span>{{item.section}} · {{item.meta}}</span><a href="/Post.dc.html" style="font-weight: 700; font-size: 14px; text-decoration: none">{{item.cta}}</a></div>
+</article>
+</sc-for>
+</div>
+
+<nav aria-label="ترقيم الصفحات" style="display: flex; justify-content: center; gap: 6px">
+<a href="#" aria-current="page" style="width: 40px; height: 40px; border-radius: 10px; background: #0F4C47; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; text-decoration: none">١</a>
+<a href="#" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E7E5DF; background: #FFFFFF; color: #1C1F1E; display: flex; align-items: center; justify-content: center; text-decoration: none">٢</a>
+<a href="#" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E7E5DF; background: #FFFFFF; color: #1C1F1E; display: flex; align-items: center; justify-content: center; text-decoration: none">٣</a>
+</nav>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; border-radius: 16px; background: #F2F8F6; border: 1px solid #CFE3DE">
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 18px; font-weight: 700; color: #0F4C47">لم تجد ما تبحث عنه؟</span><span style="font-size: 15px; color: #5B625F">صف الموقف للمساعد، ويوصلك إلى المادة الأقرب.</span></div>
+<a href="/Assistant.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border-radius: 12px; background: #0F4C47; color: #FFFFFF; font-weight: 700; text-decoration: none">اسأل رفيق الداعية</a>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+renderVals() {
+const T = {
+shubha: { type: 'رد على شبهة', typeBg: '#FBEAE8', typeColor: '#8F2A24' },
+article: { type: 'مقال', typeBg: '#E8F0FA', typeColor: '#1F548D' },
+booklet: { type: 'كتيب', typeBg: '#E6F4EC', typeColor: '#17633D' },
+leaflet: { type: 'مطوية', typeBg: '#FDF3E1', typeColor: '#8A5A12' }
+};
+const items = [
+{ ...T.shubha, lang: 'العربية', title: 'مصدر القرآن الكريم', summary: 'الرد المعتمد على شبهة مصدر القرآن، مع الأدلة والمراجع.', tags: ['قرآن', 'وحي'], section: 'موسوعة الشبهات', meta: '[ن] دقائق', cta: 'قراءة' },
+{ ...T.article, lang: 'العربية', title: 'التعريف بالألوهية أولاً', summary: 'بيان وجوب البدء بالتوحيد قبل الشرائع في الحوار الدعوي.', tags: ['منهج', 'تدرج'], section: 'أساليب الدعوة', meta: '[ن] دقائق', cta: 'قراءة' },
+{ ...T.booklet, lang: 'English', title: 'خطواتك الأولى في الإسلام', summary: 'كتيب مبسط يعرّف المهتدي الجديد بأركان الإسلام والإيمان.', tags: ['أركان'], section: 'المسلم الجديد', meta: 'PDF', cta: 'تحميل' },
+{ ...T.article, lang: 'العربية', title: 'فن الحوار مع الآخر', summary: 'أساليب عملية لبدء الحوار وإدارته بحكمة وهدوء.', tags: ['حوار'], section: 'أساليب الدعوة', meta: '[ن] دقائق', cta: 'قراءة' },
+{ ...T.leaflet, lang: 'English', title: 'ما هو الإسلام؟', summary: 'مطوية تعريفية قصيرة جاهزة للإهداء.', tags: ['تعريف'], section: 'التعريف بالإسلام', meta: 'PDF', cta: 'تحميل' },
+{ ...T.shubha, lang: 'العربية', title: 'الوحي والنبوة', summary: 'الرد المعتمد حول حقيقة الوحي وإثبات النبوة.', tags: ['نبوة', 'وحي'], section: 'موسوعة الشبهات', meta: '[ن] دقائق', cta: 'قراءة' }
+];
+return { items };
+}
+}
+</script>
+</body>
+</html>
