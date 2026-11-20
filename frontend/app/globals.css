@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Design Tokens — رفيق الداعية (docs/design-brief.md البند 2)
+   كل لون/خط/زاوية/ظل يُستخدم عبر هذه المتغيرات فقط.
+   المسافات: سلم Tailwind الافتراضي (أساس 4px): 1=4 · 2=8 · 3=12 · 4=16 · 6=24 · 8=32 · 12=48 · 16=64 · 24=96
+   ============================================================ */
+@theme {
+  /* الأساسي */
+  --color-primary-700: #0f4c47;
+  --color-primary-600: #14645c;
+  --color-primary-500: #1b7f74;
+  --color-primary-100: #e3f1ee;
+  --color-primary-50: #f2f8f6;
+  --color-approved-border: #cfe3de; /* حد بطاقة النص المعتمد */
+
+  /* التمييز (بحذر شديد) */
+  --color-accent-600: #9a7a45;
+  --color-accent-100: #f5ede0;
+  --color-accent-fg: #7a5e30; /* نص على accent-100 بتباين AA */
+
+  /* الخلفيات */
+  --color-bg: #fafaf7;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f3ef;
+
+  /* الحدود */
+  --color-border: #e7e5df;
+
+  /* النصوص */
+  --color-text: #1c1f1e;
+  --color-text-secondary: #5b625f;
+  --color-text-muted: #8a918d;
+
+  /* الحالات */
+  --color-success: #1e7f4f;
+  --color-success-bg: #e6f4ec;
+  --color-warning: #b7791f;
+  --color-warning-bg: #fdf3e1;
+  --color-warning-fg: #8a5a12; /* نص على warning-bg بتباين AA (اللون الأصلي 3.3:1 فقط) */
+  --color-danger: #b4362f;
+  --color-danger-bg: #fbeae8;
+  --color-info: #2563a6;
+  --color-info-bg: #e8f0fa;
+
+  /* الخطوط */
+  --font-sans: var(--font-tajawal), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-en: var(--font-inter), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* سلم الخطوط: الحجم / السطر / الوزن */
+  --text-display: 40px;
+  --text-display--line-height: 52px;
+  --text-display--font-weight: 800;
+  --text-display-mobile: 30px;
+  --text-display-mobile--line-height: 40px;
+  --text-display-mobile--font-weight: 800;
+  --text-h1: 32px;
+  --text-h1--line-height: 44px;
+  --text-h1--font-weight: 700;
+  --text-h1-mobile: 26px;
+  --text-h1-mobile--line-height: 36px;
+  --text-h1-mobile--font-weight: 700;
+  --text-h2: 24px;
+  --text-h2--line-height: 34px;
+  --text-h2--font-weight: 700;
+  --text-h3: 20px;
+  --text-h3--line-height: 30px;
+  --text-h3--font-weight: 700;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 34px;
+  --text-body: 16px;
+  --text-body--line-height: 28px;
+  --text-sm: 14px;
+  --text-sm--line-height: 24px;
+  --text-sm--font-weight: 500;
+  --text-xs: 12px;
+  --text-xs--line-height: 20px;
+  --text-xs--font-weight: 500;
+
+  /* الزوايا */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* الظلال */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 20, 0.05);
+  --shadow-md: 0 6px 16px rgba(16, 24, 20, 0.06);
+  --shadow-lg: 0 16px 40px rgba(16, 24, 20, 0.08);
+
+  /* الحركة */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 200ms var(--ease-out);
+  --animate-pop-in: pop-in 200ms var(--ease-out);
+  --animate-sheet-in: sheet-in 200ms var(--ease-out);
+  --animate-drawer-in: drawer-in 200ms var(--ease-out);
+  --animate-indeterminate: indeterminate 1.4s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.97); }
+  }
+  /* الـ Sheet يخرج من جهة النهاية، والـ Drawer من جهة البداية (الاتجاه يُعكس في RTL أدناه) */
+  @keyframes sheet-in {
+    from { translate: var(--slide-end) 0; }
+  }
+  @keyframes drawer-in {
+    from { translate: var(--slide-start) 0; }
+  }
+  @keyframes indeterminate {
+    0% { margin-inline-start: -40%; }
+    100% { margin-inline-start: 100%; }
+  }
+}
+
+:root {
+  --slide-end: 100%;
+  --slide-start: -100%;
+  color-scheme: light;
+}
+[dir="rtl"] {
+  --slide-end: -100%;
+  --slide-start: 100%;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+  [lang="en"] {
+    font-family: var(--font-en);
+  }
+  ::selection {
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+/* احترام تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   نص المادة (HTML من TipTap) — للقراءة وللمحرر. خصائص منطقية فقط.
+   ============================================================ */
+.prose-content {
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.prose-content > * + * {
+  margin-block-start: 0.85em;
+}
+.prose-content h2 {
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  font-weight: 700;
+  margin-block-start: 1.4em;
+}
+.prose-content h3 {
+  font-size: var(--text-body-lg);
+  line-height: 30px;
+  font-weight: 700;
+  margin-block-start: 1.2em;
+}
+.prose-content ul,
+.prose-content ol {
+  padding-inline-start: 1.5em;
+}
+.prose-content ul {
+  list-style: disc;
+}
+.prose-content ol {
+  list-style: decimal;
+}
+.prose-content li + li {
+  margin-block-start: 0.25em;
+}
+.prose-content li > p {
+  margin: 0;
+}
+.prose-content blockquote {
+  border-inline-start: 3px solid var(--color-primary-500);
+  padding-inline-start: 1em;
+  color: var(--color-text-secondary);
+}
+.prose-content a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-content strong {
+  font-weight: 700;
+}
+.prose-content code {
+  font-family: var(--font-mono);
+  background: var(--color-surface-muted);
+  border-radius: 4px;
+  padding-inline: 4px;
+  font-size: 0.9em;
+}
+.prose-content hr {
+  border: 0;
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* محرر TipTap */
+.tiptap {
+  outline: none;
+  min-height: 280px;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+}
