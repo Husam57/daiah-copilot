@@ -30,6 +30,7 @@ class Settings:
     jwt_secret: str
     admin_email: str
     admin_password: str
+    cors_origins: tuple[str, ...]
 
 
 settings = Settings(
@@ -39,6 +40,10 @@ settings = Settings(
     jwt_secret=_env("JWT_SECRET"),
     admin_email=_env("ADMIN_EMAIL"),
     admin_password=os.getenv("ADMIN_PASSWORD") or "",
+    # ليس سراً: نطاقات الواجهة المسموح لها (مفصولة بفواصل)
+    cors_origins=tuple(
+        o.strip() for o in (_env("CORS_ORIGINS") or "http://localhost:3000").split(",") if o.strip()
+    ),
 )
 
 SECRET_KEYS = ("SUPABASE_SERVICE_KEY", "GEMINI_API_KEY", "JWT_SECRET", "ADMIN_PASSWORD")
