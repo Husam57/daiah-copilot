@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS posts (
     reviewed_by  BIGINT REFERENCES users(id) ON DELETE SET NULL,
     published_at TIMESTAMPTZ,
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    indexed_at   TIMESTAMPTZ,  -- آخر فهرسة RAG ناجحة (NULL = غير مفهرس)
     CONSTRAINT posts_status_check CHECK (status IN ('draft', 'review', 'published')),
     CONSTRAINT posts_content_type_check
         CHECK (content_type IN ('article', 'booklet', 'leaflet', 'shubha_response'))
@@ -61,6 +62,7 @@ ALTER TABLE posts ADD COLUMN IF NOT EXISTS topic        TEXT;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS source_name  TEXT;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'article';
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS file_url     TEXT;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS indexed_at   TIMESTAMPTZ;
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_content_type_check;
 ALTER TABLE posts ADD CONSTRAINT posts_content_type_check
     CHECK (content_type IN ('article', 'booklet', 'leaflet', 'shubha_response'));
@@ -144,6 +146,13 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
+    -- تحديث indexed_at وحده (من الفهرسة) لا يُعتبر تعديلاً على المنشور
+    IF NEW.indexed_at IS DISTINCT FROM OLD.indexed_at
+       AND (to_jsonb(NEW) - 'indexed_at' - 'updated_at')
+         = (to_jsonb(OLD) - 'indexed_at' - 'updated_at') THEN
+        NEW.updated_at := OLD.updated_at;
+        RETURN NEW;
+    END IF;
     NEW.updated_at := now();
     RETURN NEW;
 END;

@@ -12,6 +12,16 @@ load_dotenv(ENV_PATH)
 # أبعاد متجه Gemini (output_dimensionality=768) — فهرس HNSW لا يدعم أكثر من 2000 بُعد
 EMBEDDING_DIM = 768
 
+# أسماء نماذج Gemini (ليست أسراراً؛ يمكن تغييرها من .env)
+EMBEDDING_MODEL = (os.getenv("GEMINI_EMBED_MODEL") or "gemini-embedding-001").strip()
+# سلسلة نماذج Flash تُجرَّب بالترتيب (بعضها يرجع 503 وقت الضغط)؛ مفصولة بفواصل
+CHAT_MODELS = tuple(
+    m.strip() for m in (
+        os.getenv("GEMINI_CHAT_MODELS") or "gemini-3.5-flash-lite,gemini-3.8-flash"
+    ).split(",") if m.strip()
+)
+CHAT_TIMEOUT_MS = 15_000  # مهلة كل محاولة توليد
+
 TABLES = (
     "users", "sections", "posts", "post_chunks",
     "ai_settings", "referral_centers", "chat_logs",

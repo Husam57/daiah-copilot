@@ -83,6 +83,13 @@ class PostUpdate(_Model):
     status: EditableStatus | None = None
 
 
+class PostWithIndex(Post):
+    """رد النشر/التعديل: المنشور + نتيجة الفهرسة (التحذير لا يعني فشل الحفظ)."""
+    indexed: bool = False
+    chunks: int | None = None
+    index_warning: str | None = None
+
+
 class PostListItem(_Model):
     """صف في جدول المنشورات (بدون المحتوى الكامل لتخفيف الاستجابة)."""
     id: int
@@ -98,6 +105,7 @@ class PostListItem(_Model):
     status: str
     published_at: datetime | None = None
     updated_at: datetime
+    indexed_at: datetime | None = None
 
 
 class PostPage(_Model):
@@ -169,6 +177,6 @@ class PublicPost(_Model):
 __all__ = [
     "LoginRequest", "TokenResponse", "MessageResponse", "User",
     "SectionIn", "SectionUpdate", "SectionAdmin", "Section",
-    "PostIn", "PostUpdate", "PostListItem", "PostPage", "Post",
+    "PostIn", "PostUpdate", "PostListItem", "PostPage", "Post", "PostWithIndex",
     "PublicSection", "SectionRef", "PublicPostItem", "PublicSectionPosts", "PublicPost",
 ]

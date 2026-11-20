@@ -77,6 +77,7 @@ class Post(PostCreate):
     reviewed_by: int | None = None
     published_at: datetime | None = None
     updated_at: datetime
+    indexed_at: datetime | None = None  # آخر فهرسة RAG ناجحة (None = غير مفهرس)
 
 
 # ---------- post_chunks ----------

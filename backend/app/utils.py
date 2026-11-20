@@ -82,3 +82,18 @@ def reject_nulls(data: dict, required: tuple[str, ...]) -> None:
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "هذه الحقول لا يمكن أن تكون فارغة: " + "، ".join(bad),
         )
+
+
+def fetch_all(build_query, page_size: int = 1000) -> list[dict]:
+    """يجلب كل الصفوف على دفعات (PostgREST يحدّ الاستجابة بـ 1000 صف افتراضياً).
+
+    build_query: دالة بلا مُعاملات ترجع query جديداً (select + فلاتر + order) في كل استدعاء.
+    """
+    out: list[dict] = []
+    start = 0
+    while True:
+        rows = build_query().range(start, start + page_size - 1).execute().data or []
+        out.extend(rows)
+        if len(rows) < page_size:
+            return out
+        start += page_size

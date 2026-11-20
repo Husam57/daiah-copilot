@@ -1,11 +1,16 @@
 """إدارة المنشورات (لوحة التحكم — JWT مطلوب)."""
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from ..config import redact
 from ..db import get_supabase
 from ..models import ContentType, PostStatus
-from ..schemas import MessageResponse, Post, PostIn, PostListItem, PostPage, PostUpdate, User
+from ..rag.indexer import index_post, unindex_post
+from ..schemas import (
+    MessageResponse, Post, PostIn, PostListItem, PostPage, PostUpdate, PostWithIndex, User,
+)
 from ..security import require_admin_user
 from ..utils import clean_search, reject_nulls, resolve_slug
 
@@ -17,6 +22,25 @@ router = APIRouter(
 
 _LIST_COLUMNS = ",".join(PostListItem.model_fields)
 _REQUIRED = ("section_id", "slug", "title_ar", "content_ar", "tags", "content_type", "status")
+# تغيّر أي منها في منشور منشور = إعادة فهرسة (المقاطع مبنية على العنوان والمحتوى)
+_INDEXED_FIELDS = ("title_ar", "title_en", "content_ar", "content_en")
+log = logging.getLogger("daiah")
+
+
+def _try_index(post_id: int) -> tuple[dict | None, str | None]:
+    """فهرسة لا تُفشل الطلب: ترجع (النتيجة، رسالة تحذير)."""
+    try:
+        return index_post(post_id), None
+    except Exception as e:  # noqa: BLE001
+        log.warning("indexing post %s failed: %s", post_id, redact(str(e)))
+        return None, f"تم الحفظ لكن فشلت الفهرسة: {redact(str(e))[:200]} — أعد المحاولة من «إعادة فهرسة»"
+
+
+def _with_index(post_id: int, result: dict | None, warning: str | None) -> PostWithIndex:
+    row = _get_or_404(post_id)
+    return PostWithIndex(
+        **row, indexed=result is not None, chunks=(result or {}).get("chunks"), index_warning=warning,
+    )
 
 
 def _get_or_404(post_id: int) -> dict:
@@ -79,8 +103,11 @@ def create_post(body: PostIn, user: User = Depends(require_admin_user)) -> Post:
     return Post(**row)
 
 
-@router.put("/{post_id}", response_model=Post, summary="تعديل منشور (الحقول المرسلة فقط)")
-def update_post(post_id: int, body: PostUpdate) -> Post:
+@router.put(
+    "/{post_id}", response_model=PostWithIndex,
+    summary="تعديل منشور (الحقول المرسلة فقط) — يعيد الفهرسة أو يلغيها تلقائياً",
+)
+def update_post(post_id: int, body: PostUpdate) -> PostWithIndex:
     current = _get_or_404(post_id)
     data = body.model_dump(exclude_unset=True)
     reject_nulls(data, _REQUIRED)
@@ -90,13 +117,24 @@ def update_post(post_id: int, body: PostUpdate) -> Post:
         _check_section(data["section_id"])
     if "slug" in data:
         data["slug"] = resolve_slug("posts", data["slug"], None, "post", exclude_id=post_id)
-    if current["status"] == "published" and data.get("status") in ("draft", "review"):
-        # إلغاء النشر: يختفي من الموقع العام
+    was_published = current["status"] == "published"
+    unpublish = was_published and data.get("status") in ("draft", "review")
+    if unpublish:
+        # إلغاء النشر: يختفي من الموقع العام ومن بحث المساعد
         data["published_at"] = None
-        # TODO الخطوة 4: حذف مقاطع المنشور من post_chunks عند إلغاء النشر
-    # TODO الخطوة 4: إعادة فهرسة المنشور المنشور إذا تغيّر content_ar/content_en
-    row = get_supabase().table("posts").update(data).eq("id", post_id).execute().data[0]
-    return Post(**row)
+    get_supabase().table("posts").update(data).eq("id", post_id).execute()
+
+    result = warning = None
+    if unpublish:
+        try:
+            unindex_post(post_id)
+        except Exception as e:  # noqa: BLE001 — البحث يستبعد غير المنشور على أي حال
+            warning = f"أُلغي النشر لكن تعذّر حذف المقاطع: {redact(str(e))[:200]}"
+    elif was_published and any(
+        f in data and data[f] != current.get(f) for f in _INDEXED_FIELDS
+    ):
+        result, warning = _try_index(post_id)
+    return _with_index(post_id, result, warning)
 
 
 @router.delete("/{post_id}", response_model=MessageResponse, summary="حذف منشور")
@@ -107,17 +145,31 @@ def delete_post(post_id: int) -> MessageResponse:
     return MessageResponse(detail=f"تم حذف المنشور «{post['title_ar']}»")
 
 
-@router.post("/{post_id}/publish", response_model=Post, summary="نشر منشور")
-def publish_post(post_id: int, user: User = Depends(require_admin_user)) -> Post:
+@router.post(
+    "/{post_id}/publish", response_model=PostWithIndex,
+    summary="نشر منشور + فهرسته (فشل الفهرسة لا يلغي النشر)",
+)
+def publish_post(post_id: int, user: User = Depends(require_admin_user)) -> PostWithIndex:
     _get_or_404(post_id)
     data = {
         "status": "published",
         "published_at": datetime.now(timezone.utc).isoformat(),
         "reviewed_by": user.id,
     }
-    row = get_supabase().table("posts").update(data).eq("id", post_id).execute().data[0]
+    get_supabase().table("posts").update(data).eq("id", post_id).execute()
+    result, warning = _try_index(post_id)
+    return _with_index(post_id, result, warning)
 
-    # TODO الخطوة 4: فهرسة RAG هنا
-    # (تقسيم content_ar/content_en إلى مقاطع -> embeddings من Gemini -> post_chunks)
 
-    return Post(**row)
+@router.post(
+    "/{post_id}/reindex", response_model=PostWithIndex, summary="إعادة فهرسة منشور منشور",
+)
+def reindex_post(post_id: int) -> PostWithIndex:
+    post = _get_or_404(post_id)
+    if post["status"] != "published":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "لا يُفهرس إلا المنشور المنشور")
+    try:
+        result = index_post(post_id)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"فشلت الفهرسة: {redact(str(e))[:200]}")
+    return _with_index(post_id, result, None)
