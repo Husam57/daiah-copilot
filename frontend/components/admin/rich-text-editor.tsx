@@ -87,7 +87,7 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-sm border bg-surface transition-[border-color,box-shadow] duration-150 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500",
+        "overflow-hidden rounded-md border bg-surface transition-[border-color,box-shadow] duration-150 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500",
         invalid ? "border-danger" : "border-border",
       )}
     >
@@ -125,7 +125,7 @@ function Toolbar({ editor }: { editor: Editor }) {
     <div
       role="toolbar"
       aria-label="أدوات التنسيق"
-      className="flex flex-wrap items-center gap-0.5 border-b border-border bg-surface-muted/60 px-1.5 py-1"
+      className="flex flex-wrap items-center gap-0.5 border-b border-border bg-surface-muted px-2 py-1.5"
     >
       <ToolButton label="عنوان رئيسي" active={s.h2} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
         <Heading2 />
@@ -195,7 +195,7 @@ function ToolButton({
       aria-pressed={active}
       title={label}
       className={cn(
-        "grid size-9 place-items-center rounded-sm text-text-secondary transition-colors duration-150 hover:bg-surface hover:text-text disabled:opacity-40 [&_svg]:size-4",
+        "grid size-9 place-items-center rounded-sm text-text transition-colors duration-150 hover:bg-surface hover:text-text disabled:opacity-40 [&_svg]:size-4",
         active && "bg-primary-100 text-primary-700 hover:bg-primary-100",
       )}
     >
@@ -238,7 +238,7 @@ function LinkButton({ editor, active, currentHref }: { editor: Editor; active: b
           title="إدراج رابط"
           aria-pressed={active}
           className={cn(
-            "grid size-9 place-items-center rounded-sm text-text-secondary transition-colors duration-150 hover:bg-surface hover:text-text [&_svg]:size-4",
+            "grid size-9 place-items-center rounded-sm text-text transition-colors duration-150 hover:bg-surface hover:text-text [&_svg]:size-4",
             active && "bg-primary-100 text-primary-700",
           )}
         >

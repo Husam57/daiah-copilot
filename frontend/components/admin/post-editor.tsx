@@ -1,24 +1,11 @@
 "use client";
 
-import {
-  ArrowRight,
-  ChevronDown,
-  Database,
-  Eye,
-  Info,
-  MoreHorizontal,
-  RefreshCw,
-  Save,
-  Send,
-  Undo2,
-  Upload,
-} from "lucide-react";
-import Link from "next/link";
+import { ChevronDown, Database, ExternalLink, Eye, Info, MoreHorizontal, RefreshCw, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Collapsible } from "radix-ui";
 import { useEffect, useMemo, useState } from "react";
 import { ApprovedTextCard } from "@/components/ui/answer";
-import { IndexBadge, StatusBadge, VerifiedBadge } from "@/components/ui/badge";
+import { IndexBadge, VerifiedBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -43,6 +30,7 @@ import type { ContentType, Post, PostStatus, PostWithIndex, Section } from "@/li
 import { cn, isHtmlEmpty } from "@/lib/utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useShell } from "./shell-context";
+import { TopbarActions } from "./topbar-actions";
 
 interface FormState {
   section_id: string;
@@ -246,8 +234,35 @@ export function PostEditor({
   const sectionOptions = sections;
   const currentSection = sections.find((s) => String(s.id) === form.section_id);
 
-  const meta = (
-    <div className="space-y-5">
+  const typeField = (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-bold">نوع المحتوى</legend>
+      <div className="grid grid-cols-2 gap-1.5">
+        {(Object.entries(CONTENT_TYPE_LABELS) as [ContentType, string][]).map(([v, l]) => {
+          const on = form.content_type === v;
+          return (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={on}
+              onClick={() => set("content_type", v)}
+              className={cn(
+                "h-10 rounded-[10px] border text-sm transition-colors",
+                on
+                  ? "border-primary-700 bg-primary-100 font-bold text-primary-700"
+                  : "border-border bg-surface text-text hover:bg-surface-muted",
+              )}
+            >
+              {l}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+
+  const metaMain = (
+    <div className="flex flex-col gap-4">
       <Field id="p-section" label="القسم" required error={errors.section_id}>
         <Select id="p-section" value={form.section_id} onChange={(e) => set("section_id", e.target.value)}>
           <option value="">— اختر القسم —</option>
@@ -259,107 +274,126 @@ export function PostEditor({
           ))}
         </Select>
       </Field>
-      <Field id="p-type" label="النوع">
-        <Select id="p-type" value={form.content_type} onChange={(e) => set("content_type", e.target.value as ContentType)}>
-          {Object.entries(CONTENT_TYPE_LABELS).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </Select>
-      </Field>
       <Field id="p-topic" label="الموضوع">
         <Input id="p-topic" value={form.topic} onChange={(e) => set("topic", e.target.value)} />
       </Field>
+      {typeField}
       <Field id="p-tags" label="الوسوم" hint="Enter أو فاصلة لإضافة وسم.">
         <TagsInput id="p-tags" value={form.tags} onChange={(t) => set("tags", t)} />
       </Field>
+    </div>
+  );
+
+  const metaSource = (
+    <div className="flex flex-col gap-4">
       <Field id="p-source" label="اسم المصدر" hint="يظهر أسفل بطاقة النص المعتمد.">
-        <Input id="p-source" value={form.source_name} onChange={(e) => set("source_name", e.target.value)} />
+        <Input
+          id="p-source"
+          value={form.source_name}
+          placeholder="مثال: اسم الموقع أو الكتاب"
+          onChange={(e) => set("source_name", e.target.value)}
+        />
       </Field>
       <Field id="p-ref" label="الرابط الخارجي" error={errors.external_ref}>
-        <Input id="p-ref" dir="ltr" inputMode="url" placeholder="https://" value={form.external_ref} onChange={(e) => set("external_ref", e.target.value)} />
+        <Input
+          id="p-ref"
+          dir="ltr"
+          inputMode="url"
+          placeholder="https://"
+          value={form.external_ref}
+          onChange={(e) => set("external_ref", e.target.value)}
+          className="text-sm"
+        />
       </Field>
-      <Field id="p-file" label="رابط الملف" hint="للكتيبات والمطويات (PDF)." error={errors.file_url}>
-        <Input id="p-file" dir="ltr" inputMode="url" placeholder="https://" value={form.file_url} onChange={(e) => set("file_url", e.target.value)} />
+      <Field id="p-file" label="رابط الملف" optional hint="للكتيبات والمطويات (PDF)." error={errors.file_url}>
+        <Input
+          id="p-file"
+          dir="ltr"
+          inputMode="url"
+          placeholder="https://"
+          value={form.file_url}
+          onChange={(e) => set("file_url", e.target.value)}
+          className="text-sm"
+        />
       </Field>
       <Field
         id="p-slug"
         label="الرابط المختصر (slug)"
-        hint={isNew ? "اختياري — يُولَّد من العنوان الإنجليزي." : undefined}
+        optional={isNew}
+        hint={isNew ? "يُولَّد من العنوان الإنجليزي." : undefined}
         error={errors.slug}
       >
-        <Input id="p-slug" dir="ltr" value={form.slug} onChange={(e) => set("slug", e.target.value.toLowerCase())} placeholder="post-slug" />
+        <Input
+          id="p-slug"
+          dir="ltr"
+          value={form.slug}
+          onChange={(e) => set("slug", e.target.value.toLowerCase())}
+          placeholder="post-slug"
+          className="text-sm"
+        />
       </Field>
     </div>
   );
 
   return (
-    <div className="pb-10">
-      {/* شريط الإجراءات العلوي */}
-      <div className="sticky top-16 z-30 -mx-4 mb-6 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/admin/posts"
-            className="grid size-10 shrink-0 place-items-center rounded-md text-text-secondary hover:bg-surface-muted"
-            aria-label="العودة إلى المنشورات"
-          >
-            <ArrowRight className="size-5 ltr:-scale-x-100" aria-hidden />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-h3 text-text">{isNew ? "منشور جديد" : saved.title_ar}</h1>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-              <StatusBadge status={status} />
-              {dirty ? <span className="text-warning-fg">تعديلات غير محفوظة</span> : !isNew && <span>محفوظ</span>}
-            </div>
-          </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-            <Button variant="ghost" onClick={() => setPreview(true)}>
-              <Eye aria-hidden />
-              <span className="hidden sm:inline">معاينة</span>
-            </Button>
-            <Button variant="secondary" onClick={() => run("save")} loading={busy === "save"} disabled={!!busy && busy !== "save"}>
-              {busy !== "save" && <Save aria-hidden />}
-              {status === "published" ? "حفظ التعديلات" : status === "review" ? "حفظ" : "حفظ مسودة"}
-            </Button>
-            {status === "draft" && (
-              <Button variant="secondary" onClick={() => run("review")} loading={busy === "review"} disabled={!!busy && busy !== "review"}>
-                {busy !== "review" && <Send className="rtl:-scale-x-100" aria-hidden />}
-                إرسال للمراجعة
+    <div className="flex flex-col gap-6 pb-10">
+      {/* أزرار المنشور في الشريط العلوي بجانب مسار التنقل (AdminEditor.dc.html) */}
+      <TopbarActions>
+        <Button variant="ghost" className="text-text-secondary" onClick={() => setPreview(true)} aria-label="معاينة">
+          <Eye aria-hidden className="sm:hidden" />
+          <span className="hidden sm:inline">معاينة</span>
+        </Button>
+        <Button variant="secondary" onClick={() => run("save")} loading={busy === "save"} disabled={!!busy && busy !== "save"}>
+          {status === "published" ? "حفظ التعديلات" : status === "review" ? "حفظ" : "حفظ مسودة"}
+        </Button>
+        {status === "draft" && (
+          <Button variant="secondary" onClick={() => run("review")} loading={busy === "review"} disabled={!!busy && busy !== "review"}>
+            إرسال للمراجعة
+          </Button>
+        )}
+        {status !== "published" && (
+          <Button className="px-[18px]" onClick={() => run("publish")} loading={busy === "publish"} disabled={!!busy && busy !== "publish"}>
+            نشر
+          </Button>
+        )}
+        {status === "published" && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" aria-label="إجراءات أخرى">
+                <MoreHorizontal aria-hidden />
               </Button>
-            )}
-            {status !== "published" && (
-              <Button onClick={() => run("publish")} loading={busy === "publish"} disabled={!!busy && busy !== "publish"}>
-                {busy !== "publish" && <Upload aria-hidden />}
-                نشر
-              </Button>
-            )}
-            {status === "published" && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="icon" aria-label="إجراءات أخرى">
-                    <MoreHorizontal aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => run("reindex")}>
-                    <RefreshCw aria-hidden />
-                    إعادة الفهرسة
-                  </DropdownMenuItem>
-                  <DropdownMenuItem danger onSelect={() => setConfirmUnpublish(true)}>
-                    <Undo2 aria-hidden />
-                    إلغاء النشر (إرجاع لمسودة)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => window.open(`/posts/${saved?.slug}`, "_blank", "noopener")}>
+                <ExternalLink aria-hidden />
+                عرض في الموقع
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => run("reindex")}>
+                <RefreshCw aria-hidden />
+                إعادة الفهرسة
+              </DropdownMenuItem>
+              <DropdownMenuItem danger onSelect={() => setConfirmUnpublish(true)}>
+                <Undo2 aria-hidden />
+                إلغاء النشر (إرجاع لمسودة)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </TopbarActions>
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-[26px] font-bold leading-[38px] text-text">{isNew ? "منشور جديد" : saved.title_ar}</h1>
+          <p className="text-xs text-text-muted" aria-live="polite">
+            {dirty ? <span className="text-warning-fg">تعديلات غير محفوظة</span> : isNew ? "لم يُحفظ بعد" : "كل التعديلات محفوظة"}
+          </p>
         </div>
+        <Stepper status={status} indexState={indexState} />
       </div>
 
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <Alert variant="info" icon={<Info aria-hidden />}>
-          المنشورات المنشورة فقط هي ما يستخدمه المساعد كمصدر.
+          المنشورات المنشورة فقط هي ما يستخدمه المساعد كمصدر. يُفهرس المنشور تلقائياً عند نشره.
         </Alert>
         {saved?.review_note && status === "draft" && (
           <Alert variant="warning" title="ملاحظة المراجع">
@@ -370,26 +404,26 @@ export function PostEditor({
         {formError && <Alert variant="danger">{formError}</Alert>}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex flex-wrap items-start gap-6">
         {/* العمود الرئيسي */}
-        <Card className="min-w-0 overflow-hidden">
+        <Card className="min-w-0 flex-[999_1_520px] overflow-hidden">
           <Tabs value={tab} onValueChange={(v) => setTab(v as "ar" | "en")}>
-            <TabsList className="px-3">
-              <TabsTrigger value="ar">
+            <TabsList className="px-5">
+              <TabsTrigger value="ar" className="h-12 text-[15px]">
                 العربية
                 {(errors.title_ar || errors.content_ar) && <span className="size-1.5 rounded-full bg-danger" aria-label="فيه أخطاء" />}
               </TabsTrigger>
-              <TabsTrigger value="en" lang="en">
+              <TabsTrigger value="en" lang="en" className="h-12 text-[15px]">
                 English
                 {!isHtmlEmpty(form.content_en) && <span className="size-1.5 rounded-full bg-primary-500" aria-label="فيه محتوى" />}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="ar" forceMount className="space-y-5 p-5 data-[state=inactive]:hidden">
+            <TabsContent value="ar" forceMount className="flex flex-col gap-5 p-4 data-[state=inactive]:hidden sm:p-6">
               <Field id="p-title-ar" label="العنوان" required error={errors.title_ar}>
-                <Input id="p-title-ar" value={form.title_ar} onChange={(e) => set("title_ar", e.target.value)} className="h-11 text-body" />
+                <Input id="p-title-ar" value={form.title_ar} onChange={(e) => set("title_ar", e.target.value)} className="h-[46px] px-3.5 text-[17px]" />
               </Field>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium" id="p-content-ar-label">
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold" id="p-content-ar-label">
                   المحتوى <span className="text-danger" aria-hidden>*</span>
                 </span>
                 <RichTextEditor
@@ -398,7 +432,7 @@ export function PostEditor({
                   onChange={(html) => set("content_ar", html)}
                   dir="rtl"
                   lang="ar"
-                  placeholder="اكتب نص المادة المعتمد…"
+                  placeholder="اكتب هنا نص المادة المعتمد كما سيظهر للمستخدم"
                   invalid={!!errors.content_ar}
                   describedBy={errors.content_ar ? "p-content-ar-error" : undefined}
                 />
@@ -411,21 +445,28 @@ export function PostEditor({
               <Field
                 id="p-summary"
                 label="الملخص"
-                hint="سطران يظهران في بطاقات المكتبة."
+                hint="يظهر في بطاقات المكتبة ونتائج البحث."
                 aside={<span dir="ltr" className="text-xs text-text-muted tabular-nums">{form.summary_ar.length} / 300</span>}
               >
-                <Textarea id="p-summary" maxLength={300} value={form.summary_ar} onChange={(e) => set("summary_ar", e.target.value)} />
+                <Textarea
+                  id="p-summary"
+                  rows={2}
+                  maxLength={300}
+                  value={form.summary_ar}
+                  onChange={(e) => set("summary_ar", e.target.value)}
+                  className="px-3.5 py-3"
+                />
               </Field>
             </TabsContent>
-            <TabsContent value="en" forceMount className="space-y-5 p-5 data-[state=inactive]:hidden" lang="en">
+            <TabsContent value="en" forceMount className="flex flex-col gap-5 p-4 data-[state=inactive]:hidden sm:p-6" lang="en">
               <p className="text-sm text-text-secondary" lang="ar">
                 النسخة الإنجليزية اختيارية. إن لم تُضف، يعرض المساعد النص العربي لمن يطلب الإنجليزية.
               </p>
               <Field id="p-title-en" label="Title" error={errors.title_en}>
-                <Input id="p-title-en" dir="ltr" value={form.title_en} onChange={(e) => set("title_en", e.target.value)} className="h-11 text-body" />
+                <Input id="p-title-en" dir="ltr" value={form.title_en} onChange={(e) => set("title_en", e.target.value)} className="h-[46px] px-3.5 text-[17px]" />
               </Field>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium">Content</span>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold">Content</span>
                 <RichTextEditor
                   id="p-content-en"
                   initialValue={form.content_en}
@@ -439,48 +480,39 @@ export function PostEditor({
           </Tabs>
         </Card>
 
-        {/* العمود الجانبي (لاصق) */}
-        <div className="space-y-4 lg:sticky lg:top-40 lg:self-start">
-          <Card className="p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-bold">سير العمل</p>
-              <StatusBadge status={status} />
-            </div>
-            <Stepper status={status} indexState={indexState} />
-          </Card>
-
-          <Collapsible.Root open={metaOpen} onOpenChange={setMetaOpen}>
-            <Card className="overflow-hidden">
-              <Collapsible.Trigger className="flex w-full items-center justify-between px-5 py-4 text-sm font-bold lg:pointer-events-none">
-                بيانات المنشور
-                <ChevronDown className={cn("size-4 transition-transform lg:hidden", metaOpen && "rotate-180")} aria-hidden />
-              </Collapsible.Trigger>
-              <Collapsible.Content forceMount className="border-t border-border p-5 data-[state=closed]:hidden lg:data-[state=closed]:block">
-                {meta}
-              </Collapsible.Content>
-            </Card>
+        {/* العمود الجانبي: لاصق على الشاشات الكبيرة، وقسم قابل للطي على الجوال */}
+        <aside aria-label="بيانات المنشور" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 lg:sticky lg:top-24">
+          <Collapsible.Root open={metaOpen} onOpenChange={setMetaOpen} className="flex flex-col gap-4">
+            <Collapsible.Trigger className="flex h-12 w-full items-center justify-between rounded-lg border border-border bg-surface px-5 text-sm font-bold lg:hidden">
+              بيانات المنشور
+              <ChevronDown className={cn("size-4 transition-transform", metaOpen && "rotate-180")} aria-hidden />
+            </Collapsible.Trigger>
+            <Collapsible.Content forceMount className="flex flex-col gap-4 data-[state=closed]:hidden lg:data-[state=closed]:flex">
+              <Card className="p-5">{metaMain}</Card>
+              <Card className="p-5">{metaSource}</Card>
+            </Collapsible.Content>
           </Collapsible.Root>
 
-          {!isNew && (
-            <Card className="p-5 text-sm">
-              <p className="mb-3 font-bold">معلومات</p>
-              <dl className="space-y-2.5">
-                <InfoRow label="آخر تعديل" value={<span title={formatDate(saved.updated_at)}>{formatRelative(saved.updated_at)}</span>} />
-                <InfoRow label="أنشأه" value={saved.created_by_name ?? "—"} />
-                <InfoRow label="راجعه" value={saved.reviewed_by_name ?? "—"} />
-                {saved.published_at && <InfoRow label="تاريخ النشر" value={formatDate(saved.published_at)} />}
-                <InfoRow label="الفهرسة" value={<IndexBadge state={indexState} />} />
-                {saved.indexed_at && <InfoRow label="آخر فهرسة" value={formatRelative(saved.indexed_at)} />}
-              </dl>
-              {status === "published" && (
-                <Button variant="secondary" size="sm" className="mt-4 w-full" onClick={() => run("reindex")} loading={busy === "reindex"}>
-                  {busy !== "reindex" && <Database aria-hidden />}
-                  إعادة الفهرسة
-                </Button>
-              )}
-            </Card>
-          )}
-        </div>
+          <Card className="p-5 text-sm">
+            <dl className="flex flex-col gap-3">
+              <InfoRow
+                label="آخر تعديل"
+                value={saved ? <span title={formatDate(saved.updated_at)}>{formatRelative(saved.updated_at)}</span> : "—"}
+              />
+              <InfoRow label="بواسطة" value={saved?.created_by_name ?? "—"} />
+              {saved?.reviewed_by_name && <InfoRow label="المراجع" value={saved.reviewed_by_name} />}
+              {saved?.published_at && <InfoRow label="تاريخ النشر" value={formatDate(saved.published_at)} />}
+              <InfoRow label="قاعدة المعرفة" value={<IndexBadge state={indexState} pill />} />
+              {saved?.indexed_at && <InfoRow label="آخر فهرسة" value={formatRelative(saved.indexed_at)} />}
+            </dl>
+            {status === "published" && (
+              <Button variant="secondary" size="sm" className="mt-4 w-full" onClick={() => run("reindex")} loading={busy === "reindex"}>
+                {busy !== "reindex" && <Database aria-hidden />}
+                إعادة الفهرسة
+              </Button>
+            )}
+          </Card>
+        </aside>
       </div>
 
       <PreviewDialog open={preview} onOpenChange={setPreview} form={form} sectionName={currentSection?.name_ar} sectionNameEn={currentSection?.name_en} />
@@ -501,8 +533,8 @@ export function PostEditor({
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-text-muted">{label}</dt>
-      <dd className="min-w-0 truncate text-end text-text">{value}</dd>
+      <dt className="text-text-secondary">{label}</dt>
+      <dd className="min-w-0 truncate text-end font-bold text-text">{value}</dd>
     </div>
   );
 }
@@ -575,8 +607,9 @@ function PreviewDialog({
 export function EditorSkeleton() {
   return (
     <div aria-busy="true" aria-label="جارٍ التحميل">
-      <Skeleton className="mb-6 h-14 w-full" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <Skeleton className="mb-6 h-10 w-1/3" />
+      <Skeleton className="mb-6 h-12 w-full" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Skeleton className="h-[520px] rounded-lg" />
         <div className="space-y-4">
           <Skeleton className="h-28 rounded-lg" />

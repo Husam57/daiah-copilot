@@ -2,62 +2,63 @@
 
 import {
   CheckCircle2,
-  ClipboardCheck,
-  Database,
-  FilePen,
+  Clock,
   FileText,
-  FolderTree,
+  FolderClosed,
   History,
   MessageCircleQuestion,
-  Percent,
+  MessageSquare,
   Plus,
   RefreshCw,
-  Send,
-  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useShell } from "@/components/admin/shell-context";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/misc";
 import { StatCard, StatusDot } from "@/components/ui/status";
 import { useAuth } from "@/lib/auth";
-import {
-  ACTIVITY_LABELS,
-  CATEGORY_LABELS,
-  formatNumber,
-  formatPercent,
-  formatRelative,
-} from "@/lib/format";
+import { ACTIVITY_LABELS, formatNumber, formatPercent, formatRelative } from "@/lib/format";
 import type { ActivityEvent, ActivityType, DashboardStats, UnansweredGroup } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 
-const ACTIVITY_ICON: Record<ActivityType, React.ComponentType<{ className?: string }>> = {
-  post_published: CheckCircle2,
-  index_updated: Database,
-  post_saved: FilePen,
-  post_review: Send,
-  settings_updated: SlidersHorizontal,
+/** لون نقطة النشاط كما في AdminDashboard.dc.html */
+const ACTIVITY_DOT: Record<ActivityType, string> = {
+  post_published: "bg-success",
+  post_review: "bg-warning",
+  post_saved: "bg-info",
+  settings_updated: "bg-primary-700",
+  index_updated: "bg-primary-700",
 };
+
+/** رأس بطاقة اللوحة: عنوان 18px وعنصر في جهة النهاية. */
+function PanelHead({ title, aside }: { title: string; aside?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-lg font-bold leading-7">{title}</h2>
+      {aside}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const stats = useApi<DashboardStats>("/api/admin/dashboard/stats");
-  const activity = useApi<ActivityEvent[]>("/api/admin/dashboard/activity", { limit: 10 });
+  const activity = useApi<ActivityEvent[]>("/api/admin/dashboard/activity", { limit: 8 });
   const unanswered = useApi<UnansweredGroup[]>("/api/admin/ai/unanswered", { limit: 5 });
   const s = stats.data;
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <PageHeader
+        className="mb-0"
         title={`أهلاً، ${user?.name ?? ""}`}
-        description="نظرة عامة على المحتوى والمساعد."
+        description="نظرة سريعة على المحتوى والمساعد."
         actions={
-          <Link href="/admin/posts/new" className={buttonVariants()}>
+          <Link href="/admin/posts/new" className={buttonVariants({ size: "lg" })}>
             <Plus aria-hidden />
             منشور جديد
           </Link>
@@ -65,61 +66,66 @@ export default function DashboardPage() {
       />
 
       {stats.error ? (
-        <Card className="mb-6">
+        <Card>
           <ErrorState message={stats.error.message} onRetry={stats.reload} />
         </Card>
       ) : (
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard
-            icon={<FolderTree />}
+            icon={<FolderClosed />}
             label="الأقسام"
             value={formatNumber(s?.sections)}
             hint={s && `${formatNumber(s.sections_active)} مفعّل`}
             loading={stats.loading}
           />
-          <StatCard icon={<FileText />} label="المنشورات" value={formatNumber(s?.posts_total)} loading={stats.loading} />
+          <StatCard icon={<FileText />} label="كل المنشورات" value={formatNumber(s?.posts_total)} loading={stats.loading} />
           <StatCard
             icon={<CheckCircle2 />}
+            tone="success"
             label="منشورة"
             value={formatNumber(s?.posts_by_status.published)}
             hint={s && `${formatNumber(s.posts_indexed)} مفهرس`}
             loading={stats.loading}
           />
           <StatCard
-            icon={<ClipboardCheck />}
+            icon={<Clock />}
+            tone="warning"
             label="قيد المراجعة"
             value={formatNumber(s?.posts_by_status.review)}
             hint={s && `${formatNumber(s.posts_by_status.draft)} مسودة`}
             loading={stats.loading}
           />
           <StatCard
-            icon={<MessageCircleQuestion />}
+            icon={<MessageSquare />}
+            tone="info"
             label="أسئلة اليوم"
             value={formatNumber(s?.questions_today)}
             hint={s && `${formatNumber(s.questions_total)} إجمالاً`}
             loading={stats.loading}
           />
           <StatCard
-            icon={<Percent />}
-            label="غير المجابة اليوم"
+            icon={<MessageCircleQuestion />}
+            tone="danger"
+            label="نسبة غير المجابة"
             value={formatPercent(s?.fallback_rate_today)}
-            hint={s && `${formatPercent(s.fallback_rate_total)} إجمالاً`}
-            highlight
+            hint={s && `اليوم · ${formatPercent(s.fallback_rate_total)} إجمالاً`}
             loading={stats.loading}
           />
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <SystemStatusCard className="lg:col-span-2" />
+      <div className="flex flex-wrap items-start gap-6">
+        <SystemStatusCard className="min-w-0 flex-[1_1_320px]" />
 
-        <Card className="lg:col-span-3">
-          <CardHeader title="آخر النشاطات" icon={<History />} />
+        <Card className="flex min-w-0 flex-[2_1_420px] flex-col gap-1 p-[22px]">
+          <div className="mb-2.5">
+            <PanelHead title="آخر النشاطات" />
+          </div>
           {activity.loading ? (
-            <ul className="space-y-4 p-5">
+            <ul className="space-y-4 py-2">
               {Array.from({ length: 5 }, (_, i) => (
-                <li key={i} className="flex gap-3">
-                  <Skeleton className="size-8 rounded-full" />
+                <li key={i} className="flex gap-3.5">
+                  <Skeleton className="mt-1.5 size-2.5 rounded-full" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-3.5 w-2/3" />
                     <Skeleton className="h-3 w-1/4" />
@@ -132,34 +138,29 @@ export default function DashboardPage() {
           ) : !activity.data?.length ? (
             <EmptyState icon={<History />} title="لا نشاط بعد" description="ستظهر هنا عمليات النشر والفهرسة وتعديل التعليمات." />
           ) : (
-            <ol className="relative space-y-1 p-3">
+            <ol>
               {activity.data.map((e, i) => {
-                const Icon = ACTIVITY_ICON[e.type];
-                const content = (
+                const text = (
                   <>
-                    <span className="relative z-10 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary-600">
-                      <Icon className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm">
-                        <span className="font-bold text-text">{ACTIVITY_LABELS[e.type]}</span>
-                        {e.title && <span className="text-text-secondary"> — {e.title}</span>}
-                        {e.version && <span className="text-text-secondary"> — الإصدار {formatNumber(e.version)}</span>}
-                      </span>
-                      <span className="block text-xs text-text-muted">{formatRelative(e.at)}</span>
-                    </span>
+                    {ACTIVITY_LABELS[e.type]}
+                    {e.title && <> «{e.title}»</>}
+                    {e.version && <> (الإصدار {formatNumber(e.version)})</>}
                   </>
                 );
                 const href = e.post_id ? `/admin/posts/${e.post_id}` : e.type === "settings_updated" ? "/admin/ai/settings" : null;
                 return (
-                  <li key={`${e.type}-${e.at}-${i}`}>
-                    {href ? (
-                      <Link href={href} className="flex items-start gap-3 rounded-md px-2 py-2 hover:bg-bg">
-                        {content}
-                      </Link>
-                    ) : (
-                      <div className="flex items-start gap-3 px-2 py-2">{content}</div>
-                    )}
+                  <li key={`${e.type}-${e.at}-${i}`} className="flex items-start gap-3.5 border-b border-border-subtle py-2.5 last:border-b-0">
+                    <span className={cn("mt-[7px] size-2.5 shrink-0 rounded-full", ACTIVITY_DOT[e.type])} aria-hidden />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      {href ? (
+                        <Link href={href} className="text-[15px] hover:text-primary-600">
+                          {text}
+                        </Link>
+                      ) : (
+                        <span className="text-[15px]">{text}</span>
+                      )}
+                      <span className="text-xs text-text-muted">{formatRelative(e.at)}</span>
+                    </span>
                   </li>
                 );
               })}
@@ -168,21 +169,19 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader
+      <Card className="flex flex-col gap-3 p-[22px]">
+        <PanelHead
           title="أكثر الأسئلة غير المجابة"
-          description="أسئلة لم يجد لها المساعد مادة فوق العتبة — فرصة لإضافة محتوى."
-          icon={<MessageCircleQuestion />}
-          actions={
-            <Link href="/admin/ai/unanswered" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+          aside={
+            <Link href="/admin/ai/unanswered" className="text-sm font-bold text-primary-600 hover:text-primary-700">
               عرض الكل
             </Link>
           }
         />
         {unanswered.loading ? (
-          <div className="space-y-3 p-5">
+          <div className="space-y-3">
             {Array.from({ length: 3 }, (_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
+              <Skeleton key={i} className="h-14 w-full rounded-md" />
             ))}
           </div>
         ) : unanswered.error ? (
@@ -190,23 +189,24 @@ export default function DashboardPage() {
         ) : !unanswered.data?.length ? (
           <EmptyState icon={<CheckCircle2 />} title="لا أسئلة غير مجابة" description="كل الأسئلة وجدت مادة معتمدة مناسبة." />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="flex flex-col gap-3">
             {unanswered.data.map((q) => (
-              <li key={q.question} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-text" dir="auto">
+              <li
+                key={q.question}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-subtle px-3.5 py-3"
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[15px] font-medium" dir="auto">
                     {q.question}
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    {q.category ? CATEGORY_LABELS[q.category] : "غير مصنّف"} · آخر مرة {formatRelative(q.last_at)}
-                  </p>
-                </div>
-                <Badge variant="warning">تكرر {formatNumber(q.count)}×</Badge>
+                  </span>
+                  <span className="text-xs text-text-muted">
+                    تكرر {formatNumber(q.count)} {q.count === 1 ? "مرة" : q.count <= 10 ? "مرات" : "مرة"}
+                  </span>
+                </span>
                 <Link
                   href={`/admin/posts/new?title=${encodeURIComponent(q.question)}`}
-                  className={buttonVariants({ variant: "secondary", size: "sm" })}
+                  className={buttonVariants({ variant: "soft", size: "sm" })}
                 >
-                  <Plus aria-hidden />
                   أنشئ منشوراً
                 </Link>
               </li>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
           </ul>
         )}
       </Card>
-    </>
+    </div>
   );
 }
 
@@ -222,46 +222,50 @@ function SystemStatusCard({ className }: { className?: string }) {
   const { system, systemError, refreshSystem } = useShell();
   const [checking, setChecking] = useState(false);
   return (
-    <Card className={cn("scroll-mt-24", className)} id="system">
-      <CardHeader
+    <Card className={cn("flex scroll-mt-24 flex-col gap-3.5 p-[22px]", className)} id="system">
+      <PanelHead
         title="حالة النظام"
-        description={system ? `آخر فحص: ${formatRelative(system.checked_at)}` : undefined}
-        icon={<Database />}
-        actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={checking}
-            onClick={async () => {
-              setChecking(true);
-              await refreshSystem(true);
-              setChecking(false);
-            }}
-          >
-            {!checking && <RefreshCw aria-hidden />}
-            فحص الآن
-          </Button>
+        aside={
+          <span className="flex items-center gap-1 text-xs text-text-muted">
+            {system && <>آخر فحص: {formatRelative(system.checked_at)}</>}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="size-8"
+              loading={checking}
+              aria-label="فحص الآن"
+              title="فحص الآن"
+              onClick={async () => {
+                setChecking(true);
+                await refreshSystem(true);
+                setChecking(false);
+              }}
+            >
+              {!checking && <RefreshCw aria-hidden />}
+            </Button>
+          </span>
         }
       />
       {systemError && !system ? (
         <ErrorState compact message="تعذّر فحص حالة النظام — تأكد أن الـ Backend يعمل." onRetry={() => refreshSystem(true)} />
       ) : !system ? (
-        <ul className="space-y-4 p-5">
+        <ul className="space-y-3">
           {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
           ))}
         </ul>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="flex flex-col gap-3.5">
           {system.items.map((item) => (
-            <li key={item.key} className="flex items-center justify-between gap-3 px-5 py-3.5">
-              <div className="min-w-0">
-                <p className="font-medium text-text">{item.label}</p>
-                <p className="truncate text-xs text-text-muted">
-                  {item.detail}
-                  {item.latency_ms !== undefined && ` · ${formatNumber(item.latency_ms)} ms`}
-                </p>
-              </div>
+            <li
+              key={item.key}
+              className="flex items-center justify-between gap-3 rounded-md bg-bg px-3.5 py-3"
+              title={`${item.detail}${item.latency_ms !== undefined ? ` · ${item.latency_ms} ms` : ""}`}
+            >
+              <span className="min-w-0">
+                <span className="block text-[15px] font-medium">{item.label}</span>
+                <span className="block truncate text-xs text-text-muted">{item.detail}</span>
+              </span>
               <StatusDot state={item.state} className="shrink-0" />
             </li>
           ))}

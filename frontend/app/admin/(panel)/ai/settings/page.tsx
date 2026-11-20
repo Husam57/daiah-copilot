@@ -1,18 +1,20 @@
 "use client";
 
-import { Cpu, History, Lock, RotateCcw, Save, ScanSearch, Type } from "lucide-react";
+import { FlaskConical, History, Lock, RotateCcw } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useShell } from "@/components/admin/shell-context";
+import { TopbarActions } from "@/components/admin/topbar-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Slider, Switch } from "@/components/ui/controls";
-import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { Alert, CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/misc";
+import { Tooltip } from "@/components/ui/overlays";
 import { StatusDot } from "@/components/ui/status";
 import { toast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
@@ -24,6 +26,14 @@ import { cn } from "@/lib/utils";
 const PROMPT_MAX = 4000;
 const T_MIN = 0.5;
 const T_MAX = 0.95;
+
+/** القواعد الثابتة كما هي مطبّقة في backend/app/agent (لا تتغير من اللوحة). */
+const FIXED_RULES = [
+  "لا يولّد المساعد أي رد شرعي أو فتوى أو حكم.",
+  "يعرض نص المادة المعتمدة حرفياً مع مصدرها.",
+  "يبحث في المنشورات المنشورة فقط.",
+  "إذا لم تتجاوز أي مادة حد الارتباط، يحيل للمراكز المعتمدة.",
+];
 
 interface Form {
   guidance_prompt: string;
@@ -41,6 +51,8 @@ const toForm = (s: AISettings): Form => ({
   fallback_message_en: s.fallback_message_en,
 });
 
+const sectionCard = "flex flex-col rounded-lg border border-border bg-surface p-[22px]";
+
 export default function AISettingsPage() {
   const settings = useApi<AISettings>("/api/admin/ai/settings");
   if (settings.error) {
@@ -57,12 +69,13 @@ export default function AISettingsPage() {
     return (
       <>
         <PageHeader title="الإعدادات والتعليمات" />
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
+        <div className="flex flex-wrap items-start gap-6">
+          <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-5">
+            <CardSkeleton lines={4} />
             <CardSkeleton lines={6} />
             <CardSkeleton lines={4} />
           </div>
-          <CardSkeleton lines={4} />
+          <CardSkeleton lines={5} className="min-w-0 flex-[1_1_280px]" />
         </div>
       </>
     );
@@ -76,7 +89,6 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
   const [mono, setMono] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(initial));
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const gemini = system?.items.find((i) => i.key === "gemini");
@@ -91,7 +103,7 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
 
   const save = async () => {
     if (!form.fallback_message_ar.trim() || !form.fallback_message_en.trim()) {
-      setError("رسالتا البدائل (ع/En) مطلوبتان");
+      setError("رسالتا عدم التوفر (بالعربية والإنجليزية) مطلوبتان");
       return;
     }
     setSaving(true);
@@ -101,7 +113,6 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
         method: "PUT",
         body: {
           ...form,
-          guidance_prompt: form.guidance_prompt,
           fallback_message_ar: form.fallback_message_ar.trim(),
           fallback_message_en: form.fallback_message_en.trim(),
         },
@@ -118,244 +129,188 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
 
   return (
     <>
-      <PageHeader
-        title="الإعدادات والتعليمات"
-        description="تتحكم في أسلوب جملة التوجيه وفي قرار الاسترجاع فقط — لا في مضمون الرد."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
-              <History aria-hidden />
-              استرجاع إصدار سابق
-            </Button>
-            <Button variant="ghost" onClick={() => setForm(toForm(initial))} disabled={!dirty || saving}>
-              <RotateCcw aria-hidden />
-              تراجع
-            </Button>
-            <Button onClick={save} loading={saving} disabled={!dirty}>
-              {!saving && <Save aria-hidden />}
-              حفظ كإصدار جديد
-            </Button>
-          </>
-        }
-      />
+      <TopbarActions>
+        <Link href="/admin/ai/lab" className={buttonVariants({ variant: "secondary" })}>
+          <FlaskConical aria-hidden className="sm:hidden" />
+          <span className="hidden sm:inline">تجربة في المختبر</span>
+          <span className="sr-only sm:hidden">تجربة في المختبر</span>
+        </Link>
+        {dirty && (
+          <Button variant="ghost" onClick={() => setForm(toForm(initial))} disabled={saving} aria-label="تراجع عن التعديلات">
+            <RotateCcw aria-hidden />
+          </Button>
+        )}
+        <Button className="px-[18px]" onClick={save} loading={saving} disabled={!dirty}>
+          حفظ كإصدار جديد
+        </Button>
+      </TopbarActions>
 
-      {error && (
-        <Alert variant="danger" className="mb-4">
-          {error}
-        </Alert>
-      )}
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-5">
+          <h1 className="text-[26px] font-bold leading-[38px]">الإعدادات والتعليمات</h1>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {error && <Alert variant="danger">{error}</Alert>}
+          {dirty && (
+            <Alert variant="warning">
+              تعديلات غير محفوظة — الحفظ يُنشئ الإصدار {formatNumber(initial.version + 1)} ويحفظ الحالي في السجل.
+            </Alert>
+          )}
+
           {/* القواعد الثابتة — قراءة فقط */}
-          <section
-            className="rounded-lg border border-border bg-surface-muted p-5"
-            aria-labelledby="fixed-rules"
-          >
+          <section aria-labelledby="fixed-rules" className="flex flex-col gap-3 rounded-lg border border-border bg-surface-muted p-5">
             <div className="flex items-center gap-2.5">
-              <span className="grid size-9 place-items-center rounded-full bg-surface text-text-secondary">
+              <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] border border-border bg-surface text-text-secondary">
                 <Lock className="size-4" aria-hidden />
               </span>
-              <h2 id="fixed-rules" className="text-body font-bold">
-                القواعد الثابتة للنظام
-              </h2>
-              <Badge variant="outline" className="ms-auto">
-                قراءة فقط
-              </Badge>
+              <span className="flex flex-col">
+                <h2 id="fixed-rules" className="text-base font-bold">
+                  القواعد الثابتة للنظام
+                </h2>
+                <span className="text-[13px] text-text-secondary">مكتوبة في النظام ولا تتغير من هنا.</span>
+              </span>
             </div>
-            <ul className="mt-4 space-y-2 text-sm">
-              {[
-                "لا يولّد المساعد أي رد شرعي — النموذج يصنّف السؤال ويكتب جملة توجيه قصيرة فقط.",
-                "يعرض النص المعتمد حرفياً من المنشور المنشور، مع مصدره ورابطه.",
-                "يحيل عند عدم التوفر: رسالة البدائل + أقرب مادة + المراكز المعتمدة.",
-              ].map((r) => (
-                <li key={r} className="flex items-start gap-2">
-                  <Lock className="mt-1 size-3.5 shrink-0 text-text-muted" aria-hidden />
-                  <span>{r}</span>
-                </li>
+            <ul className="flex list-disc flex-col gap-1.5 ps-5 text-[15px] leading-[26px]">
+              {FIXED_RULES.map((r) => (
+                <li key={r}>{r}</li>
               ))}
             </ul>
-            <p className="mt-4 text-xs text-text-muted">هذه القواعد مكتوبة في النظام ولا تتغير من هنا.</p>
           </section>
 
           {/* تعليمات الأسلوب */}
-          <Card>
-            <CardHeader
-              title="تعليمات الأسلوب"
-              description="تُدمج بعد القواعد الثابتة، وتؤثر في صياغة جملة التوجيه فقط."
-              icon={<Type />}
-              actions={
-                <Badge variant="primary" aria-label={`الإصدار ${initial.version}`}>
-                  الإصدار {formatNumber(initial.version)}
-                </Badge>
-              }
+          <section aria-label="تعليمات الأسلوب" className={cn(sectionCard, "gap-3")}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="guidance" className="text-base font-bold">
+                تعليمات الأسلوب
+              </label>
+              <Badge variant="primary">الإصدار {formatNumber(initial.version)} — مفعّل</Badge>
+            </div>
+            <p className="text-sm text-text-secondary">
+              تتحكم في نبرة جملة التوجيه فقط: الترحيب، والإيجاز، وأسلوب التدرج. لا تؤثر على محتوى المواد.
+            </p>
+            <Textarea
+              id="guidance"
+              rows={8}
+              maxLength={PROMPT_MAX}
+              value={form.guidance_prompt}
+              onChange={(e) => set("guidance_prompt", e.target.value)}
+              className={cn("rounded-md p-3.5 leading-7", mono && "font-mono text-[13px]")}
             />
-            <CardBody className="space-y-3">
-              <Field
-                id="guidance"
-                label="التعليمات"
-                aside={
-                  <span
-                    dir="ltr"
-                    className={cn(
-                      "text-xs tabular-nums",
-                      form.guidance_prompt.length > PROMPT_MAX ? "text-danger" : "text-text-muted",
-                    )}
-                  >
-                    {formatNumber(form.guidance_prompt.length)} / {formatNumber(PROMPT_MAX)}
-                  </span>
-                }
-              >
-                <Textarea
-                  id="guidance"
-                  rows={10}
-                  maxLength={PROMPT_MAX}
-                  value={form.guidance_prompt}
-                  onChange={(e) => set("guidance_prompt", e.target.value)}
-                  className={cn("min-h-56 leading-7", mono && "font-mono text-[13px]")}
-                />
-              </Field>
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-text-muted">
-                <span>
-                  آخر تعديل: {initial.updated_at ? formatRelative(initial.updated_at) : "—"}
-                  {initial.updated_by_user && ` · بواسطة ${initial.updated_by_user.name}`}
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-text-muted">
+              <span>
+                آخر تعديل: {initial.updated_at ? formatRelative(initial.updated_at) : "—"}
+                {initial.updated_by_user && ` — ${initial.updated_by_user.name}`}
+              </span>
+              <span className="flex items-center gap-3">
                 <label className="flex items-center gap-2">
                   <Switch checked={mono} onCheckedChange={setMono} aria-label="خط ثابت العرض" />
                   خط ثابت العرض
                 </label>
-              </div>
-            </CardBody>
-          </Card>
+                <span className={cn("tabular-nums", form.guidance_prompt.length > PROMPT_MAX && "text-danger")}>
+                  <span dir="ltr">
+                    {formatNumber(form.guidance_prompt.length)} / {formatNumber(PROMPT_MAX)}
+                  </span>{" "}
+                  حرف
+                </span>
+              </span>
+            </div>
+          </section>
 
           {/* إعدادات الاسترجاع */}
-          <Card>
-            <CardHeader title="إعدادات الاسترجاع" description="متى يعرض المساعد مادة، ومتى يحيل." icon={<ScanSearch />} />
-            <CardBody className="space-y-6">
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label htmlFor="threshold" className="text-sm font-medium">
-                    عتبة التشابه
-                  </label>
-                  <span className="rounded-sm bg-primary-100 px-2 py-0.5 font-en text-sm font-bold tabular-nums text-primary-700" dir="ltr">
-                    {form.similarity_threshold.toFixed(2)}
-                  </span>
-                </div>
-                <Slider
-                  id="threshold"
-                  aria-label="عتبة التشابه"
-                  min={Math.min(T_MIN, form.similarity_threshold)}
-                  max={Math.max(T_MAX, form.similarity_threshold)}
-                  step={0.01}
-                  value={[form.similarity_threshold]}
-                  onValueChange={([v]) => set("similarity_threshold", Math.round(v * 100) / 100)}
-                />
-                <div className="mt-1.5 flex justify-between font-en text-xs text-text-muted" dir="ltr">
-                  <span>{T_MIN.toFixed(2)}</span>
-                  <span>{T_MAX.toFixed(2)}</span>
-                </div>
-                <p className="mt-2 text-sm font-normal text-text-secondary">
-                  أعلى = أدق وأقل نتائج (إحالات أكثر). أقل = نتائج أكثر مع خطر عرض مادة بعيدة. جرّب الأثر في «مختبر الاختبار» قبل الحفظ.
-                </p>
-                {outOfRange && (
-                  <p className="mt-1 text-xs text-warning-fg">القيمة الحالية خارج المدى المقترح (0.50–0.95).</p>
-                )}
+          <section aria-labelledby="retrieval" className={cn(sectionCard, "gap-5")}>
+            <h2 id="retrieval" className="text-base font-bold">
+              إعدادات الاسترجاع
+            </h2>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="threshold" className="text-sm font-bold">
+                  حد الارتباط (العتبة)
+                </label>
+                <span className="font-en text-lg font-extrabold tabular-nums text-primary-700" lang="en" dir="ltr">
+                  {form.similarity_threshold.toFixed(2)}
+                </span>
               </div>
-              <Field id="topk" label="عدد النتائج (top_k)" hint="عدد المواد التي يسترجعها البحث (1–10).">
-                <Input
-                  id="topk"
-                  type="number"
-                  dir="ltr"
-                  lang="en"
-                  min={1}
-                  max={10}
-                  value={form.top_k}
-                  onChange={(e) => set("top_k", Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-                  className="w-28"
-                />
-              </Field>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field id="fb-ar" label="رسالة البدائل (ع)" required>
-                  <Textarea id="fb-ar" rows={5} value={form.fallback_message_ar} onChange={(e) => set("fallback_message_ar", e.target.value)} />
-                </Field>
-                <Field id="fb-en" label="Fallback message (En)" required>
-                  <Textarea
-                    id="fb-en"
-                    rows={5}
-                    lang="en"
+              <Slider
+                id="threshold"
+                aria-label="حد الارتباط (العتبة)"
+                min={Math.min(T_MIN, form.similarity_threshold)}
+                max={Math.max(T_MAX, form.similarity_threshold)}
+                step={0.01}
+                value={[form.similarity_threshold]}
+                onValueChange={([v]) => set("similarity_threshold", Math.round(v * 100) / 100)}
+              />
+              <div className="flex justify-between gap-3 text-xs text-text-muted">
+                <span>أعلى = أدق وأقل نتائج</span>
+                <span>أقل = نتائج أكثر وأقل دقة</span>
+              </div>
+              {outOfRange && <p className="text-xs text-warning-fg">القيمة الحالية خارج المدى المقترح (0.50–0.95).</p>}
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <div className="min-w-0 flex-[1_1_160px]">
+                <Field id="topk" label="عدد النتائج المسترجعة" hint="من 1 إلى 10.">
+                  <Input
+                    id="topk"
+                    type="text"
+                    inputMode="numeric"
                     dir="ltr"
-                    value={form.fallback_message_en}
-                    onChange={(e) => set("fallback_message_en", e.target.value)}
+                    lang="en"
+
+
+                    value={form.top_k}
+                    onChange={(e) => set("top_k", Math.max(1, Math.min(10, Number(e.target.value.replace(/[^0-9]/g, "")) || 1)))}
+                    className="font-en"
                   />
                 </Field>
               </div>
-            </CardBody>
-          </Card>
+              <div className="flex min-w-0 flex-[1_1_160px] flex-col gap-2">
+                <span className="text-sm font-bold">النموذج</span>
+                <Tooltip content={`${initial.chat_models.join(" ← ")} · ${initial.embedding_model}`}>
+                  <span
+                    tabIndex={0}
+                    className="flex h-11 items-center justify-between gap-2 rounded-[10px] border border-border bg-bg px-3 text-sm"
+                  >
+                    <span lang="en" dir="ltr" className="truncate font-en">
+                      {initial.chat_models[0] ?? "Gemini Flash"}
+                    </span>
+                    {gemini ? <StatusDot state={gemini.state} /> : <Skeleton className="h-4 w-12" />}
+                  </span>
+                </Tooltip>
+                <span className="text-xs text-text-muted">أسماء النماذج تُغيَّر من backend/.env فقط.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* رسائل عدم التوفر */}
+          <section aria-labelledby="fallback-msgs" className={cn(sectionCard, "gap-4")}>
+            <h2 id="fallback-msgs" className="text-base font-bold">
+              رسالة عدم توفر المادة
+            </h2>
+            <Field id="fb-ar" label="بالعربية" required>
+              <Textarea id="fb-ar" rows={2} value={form.fallback_message_ar} onChange={(e) => set("fallback_message_ar", e.target.value)} />
+            </Field>
+            <Field id="fb-en" label="بالإنجليزية" required>
+              <Textarea
+                id="fb-en"
+                rows={2}
+                lang="en"
+                dir="ltr"
+                value={form.fallback_message_en}
+                onChange={(e) => set("fallback_message_en", e.target.value)}
+              />
+            </Field>
+          </section>
         </div>
 
-        {/* النموذج */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="النموذج" icon={<Cpu />} />
-            <CardBody className="space-y-4 text-sm">
-              <div>
-                <p className="text-text-muted">نماذج التوجيه والتصنيف (بالترتيب)</p>
-                <ul className="mt-1.5 space-y-1">
-                  {initial.chat_models.map((m, i) => (
-                    <li key={m} className="flex items-center gap-2">
-                      <span className="text-xs text-text-muted">{i + 1}.</span>
-                      <code className="rounded-sm bg-surface-muted px-1.5 py-0.5 font-en text-xs" dir="ltr">
-                        {m}
-                      </code>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="text-text-muted">نموذج الـ Embeddings</p>
-                <code className="mt-1.5 inline-block rounded-sm bg-surface-muted px-1.5 py-0.5 font-en text-xs" dir="ltr">
-                  {initial.embedding_model}
-                </code>
-              </div>
-              <div className="border-t border-border pt-4">
-                <p className="mb-1.5 text-text-muted">حالة الاتصال</p>
-                {gemini ? (
-                  <StatusDot state={gemini.state} label={`Gemini — ${gemini.state === "ok" ? "متصل" : "غير متصل"}`} />
-                ) : (
-                  <Skeleton className="h-5 w-32" />
-                )}
-              </div>
-              <p className="text-xs text-text-muted">أسماء النماذج تُغيَّر من backend/.env فقط.</p>
-            </CardBody>
-          </Card>
-          {dirty && (
-            <Alert variant="warning" title="تعديلات غير محفوظة">
-              الحفظ يُنشئ الإصدار {formatNumber(initial.version + 1)} ويحفظ الحالي في السجل.
-            </Alert>
-          )}
-        </div>
+        <VersionHistory current={initial} onRestored={onSaved} />
       </div>
-
-      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        {historyOpen && (
-          <HistorySheet
-            currentVersion={initial.version}
-            onRestored={(s) => {
-              setHistoryOpen(false);
-              onSaved(s);
-            }}
-          />
-        )}
-      </Dialog>
     </>
   );
 }
 
-function HistorySheet({ currentVersion, onRestored }: { currentVersion: number; onRestored: (s: AISettings) => void }) {
-  const history = useApi<AISettingsHistory[]>("/api/admin/ai/settings/history");
+/** سجل الإصدارات في العمود الجانبي (AdminAISettings.dc.html): الحالي أولاً ثم السابقة مع «استرجاع». */
+function VersionHistory({ current, onRestored }: { current: AISettings; onRestored: (s: AISettings) => void }) {
+  const history = useApi<AISettingsHistory[]>("/api/admin/ai/settings/history", { v: current.version });
   const [confirm, setConfirm] = useState<AISettingsHistory | null>(null);
   const [busy, setBusy] = useState(false);
-  const [expanded, setExpanded] = useState<number | null>(null);
 
   const restore = async () => {
     if (!confirm) return;
@@ -376,57 +331,49 @@ function HistorySheet({ currentVersion, onRestored }: { currentVersion: number; 
   };
 
   return (
-    <SheetContent
-      title="سجل الإصدارات"
-      description={`الإصدار الحالي: ${formatNumber(currentVersion)}. الاسترجاع يُنشئ إصداراً جديداً بنفس القيم.`}
-      className="max-w-lg"
+    <aside
+      aria-labelledby="versions"
+      className="flex min-w-0 flex-[1_1_280px] flex-col gap-2.5 rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-24"
     >
+      <h2 id="versions" className="mb-1.5 text-base font-bold">
+        سجل الإصدارات
+      </h2>
+      <div className="flex items-center justify-between gap-2.5 rounded-md border border-approved-border bg-primary-50 p-3">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-sm font-bold">الإصدار {formatNumber(current.version)}</span>
+          <span className="truncate text-xs text-text-muted">
+            {current.updated_at ? formatRelative(current.updated_at) : "—"}
+            {current.updated_by_user && ` — ${current.updated_by_user.name}`}
+          </span>
+        </span>
+        <span className="text-xs font-bold text-primary-700">الحالي</span>
+      </div>
       {history.loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-md" />
-          ))}
-        </div>
+        Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)
       ) : history.error ? (
         <ErrorState compact message={history.error.message} onRetry={history.reload} />
       ) : !history.data?.length ? (
-        <EmptyState icon={<History />} title="لا إصدارات سابقة" description="كل حفظ للإعدادات يضيف نسخة من الإصدار السابق هنا." />
+        <EmptyState
+          className="py-6"
+          icon={<History />}
+          title="لا إصدارات سابقة"
+          description="كل حفظ يضيف نسخة من الإصدار السابق هنا."
+        />
       ) : (
-        <ol className="space-y-3">
+        <ol className="flex max-h-[520px] flex-col gap-2.5 overflow-y-auto">
           {history.data.map((h) => (
-            <li key={h.id} className="rounded-md border border-border bg-surface p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">الإصدار {formatNumber(h.version)}</p>
-                  <p className="text-xs text-text-muted">
-                    حُفظ حتى {formatDate(h.saved_at)}
-                    {h.updated_by_user && ` · ${h.updated_by_user.name}`}
-                  </p>
-                </div>
-                <Button variant="secondary" size="sm" onClick={() => setConfirm(h)}>
-                  <RotateCcw aria-hidden />
-                  استرجاع
-                </Button>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                <Badge variant="neutral">
-                  العتبة <span dir="ltr">{h.similarity_threshold.toFixed(2)}</span>
-                </Badge>
-                <Badge variant="neutral">top_k {h.top_k}</Badge>
-              </div>
-              <button
-                type="button"
-                className="mt-2 text-xs text-primary-600 hover:underline"
-                onClick={() => setExpanded(expanded === h.id ? null : h.id)}
-                aria-expanded={expanded === h.id}
-              >
-                {expanded === h.id ? "إخفاء التعليمات" : "عرض التعليمات"}
-              </button>
-              {expanded === h.id && (
-                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-sm bg-surface-muted p-3 font-sans text-xs leading-5">
-                  {h.guidance_prompt || "(فارغة)"}
-                </pre>
-              )}
+            <li key={h.id} className="flex items-center justify-between gap-2.5 rounded-md border border-border-subtle bg-surface p-3">
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-bold">الإصدار {formatNumber(h.version)}</span>
+                <span className="truncate text-xs text-text-muted" title={formatDate(h.saved_at)}>
+                  {formatRelative(h.saved_at)}
+                  {h.updated_by_user && ` — ${h.updated_by_user.name}`} · العتبة{" "}
+                  <span dir="ltr">{h.similarity_threshold.toFixed(2)}</span>
+                </span>
+              </span>
+              <Button variant="secondary" size="sm" className="h-8 rounded-sm px-3 text-xs" onClick={() => setConfirm(h)}>
+                استرجاع
+              </Button>
             </li>
           ))}
         </ol>
@@ -435,12 +382,21 @@ function HistorySheet({ currentVersion, onRestored }: { currentVersion: number; 
         open={confirm !== null}
         onOpenChange={(o) => !o && setConfirm(null)}
         title={`استرجاع الإصدار ${confirm?.version ?? ""}؟`}
-        description="ستُطبَّق تعليماته وعتبته ورسائله فوراً على المساعد، ويُحفظ الإصدار الحالي في السجل."
+        description={
+          <>
+            ستُطبَّق تعليماته وعتبته ورسائله فوراً على المساعد، ويُحفظ الإصدار الحالي في السجل.
+            {confirm && (
+              <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-sm bg-surface-muted p-3 text-start font-sans text-xs leading-5 text-text">
+                {confirm.guidance_prompt || "(تعليمات فارغة)"}
+              </pre>
+            )}
+          </>
+        }
         confirmLabel="استرجاع"
         variant="primary"
         loading={busy}
         onConfirm={restore}
       />
-    </SheetContent>
+    </aside>
   );
 }

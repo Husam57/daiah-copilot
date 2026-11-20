@@ -43,7 +43,7 @@ export default function CentersPage() {
         title="المراكز المعتمدة"
         description="تظهر للمستخدم عندما لا تتوفر مادة معتمدة لسؤاله (حالة البدائل)."
         actions={
-          <Button onClick={() => setEditing("new")}>
+          <Button size="lg" onClick={() => setEditing("new")}>
             <Plus aria-hidden />
             مركز جديد
           </Button>

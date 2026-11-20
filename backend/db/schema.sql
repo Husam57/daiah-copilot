@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS chat_logs (
     score             DOUBLE PRECISION,
     is_fallback       BOOLEAN NOT NULL DEFAULT FALSE,
     feedback          SMALLINT,  -- 1 = مفيد، -1 = غير مفيد، NULL = لم يُقيَّم
+    ignored           BOOLEAN NOT NULL DEFAULT FALSE,  -- «تجاهل» في الأسئلة غير المجابة
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chat_logs_category_check CHECK (
         detected_category IS NULL
@@ -142,11 +143,15 @@ CREATE TABLE IF NOT EXISTS chat_logs (
     CONSTRAINT chat_logs_feedback_check CHECK (feedback IS NULL OR feedback IN (-1, 1))
 );
 
+-- للقواعد المنشأة قبل إضافة العمود
+ALTER TABLE chat_logs ADD COLUMN IF NOT EXISTS ignored BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ============ الفهارس ============
 CREATE INDEX IF NOT EXISTS ix_posts_section_id ON posts (section_id);
 CREATE INDEX IF NOT EXISTS ix_posts_status ON posts (status);
 CREATE INDEX IF NOT EXISTS ix_post_chunks_post_id ON post_chunks (post_id);
 CREATE INDEX IF NOT EXISTS ix_chat_logs_created_at ON chat_logs (created_at);
+CREATE INDEX IF NOT EXISTS ix_chat_logs_fallback ON chat_logs (is_fallback, ignored, created_at);
 CREATE INDEX IF NOT EXISTS ix_ai_settings_history_version ON ai_settings_history (version);
 CREATE INDEX IF NOT EXISTS ix_post_chunks_embedding_hnsw
     ON post_chunks USING hnsw (embedding vector_cosine_ops);

@@ -1,18 +1,25 @@
 "use client";
 
-import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Eye, FileText, MoreVertical, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useShell } from "@/components/admin/shell-context";
-import { Badge, IndexBadge, StatusBadge } from "@/components/ui/badge";
+import { IndexBadge, StatusBadge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, Pagination, type Column } from "@/components/ui/data-table";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input, Select } from "@/components/ui/input";
+import { Select } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/misc";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/overlays";
 import { toast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { CONTENT_TYPE_LABELS, formatRelative, postIndexState, STATUS_LABELS } from "@/lib/format";
@@ -94,7 +101,7 @@ function PostsList() {
       primary: true,
       cell: (p) => (
         <Link href={`/admin/posts/${p.id}`} className="group block min-w-0 max-w-md">
-          <span className="block truncate font-bold text-text group-hover:text-primary-600">{p.title_ar}</span>
+          <span className="block truncate text-[15px] font-bold text-text group-hover:text-primary-600">{p.title_ar}</span>
           {p.title_en && (
             <span className="block truncate text-xs text-text-muted" lang="en" dir="ltr">
               {p.title_en}
@@ -108,7 +115,11 @@ function PostsList() {
       header: "القسم",
       cell: (p) => <span className="text-text-secondary">{sectionName.get(p.section_id) ?? "—"}</span>,
     },
-    { key: "type", header: "النوع", cell: (p) => <Badge variant="outline">{CONTENT_TYPE_LABELS[p.content_type]}</Badge> },
+    {
+      key: "type",
+      header: "النوع",
+      cell: (p) => <span className="whitespace-nowrap text-text-secondary">{CONTENT_TYPE_LABELS[p.content_type]}</span>,
+    },
     { key: "status", header: "الحالة", cell: (p) => <StatusBadge status={p.status} /> },
     { key: "index", header: "الفهرسة", cell: (p) => <IndexBadge state={postIndexState(p)} /> },
     {
@@ -121,15 +132,30 @@ function PostsList() {
       header: <span className="sr-only">إجراءات</span>,
       actions: true,
       cell: (p) => (
-        <div className="flex items-center gap-1">
-          <Link href={`/admin/posts/${p.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            <Pencil aria-hidden />
-            تعديل
-          </Link>
-          <Button variant="danger-ghost" size="icon-sm" onClick={() => setDeleting(p)} aria-label={`حذف ${p.title_ar}`}>
-            <Trash2 aria-hidden />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={`إجراءات المنشور ${p.title_ar}`}>
+              <MoreVertical className="!size-[18px]" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={() => router.push(`/admin/posts/${p.id}`)}>
+              <Pencil aria-hidden />
+              تعديل
+            </DropdownMenuItem>
+            {p.status === "published" && (
+              <DropdownMenuItem onSelect={() => window.open(`/posts/${p.slug}`, "_blank", "noopener")}>
+                <Eye aria-hidden />
+                عرض في الموقع
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem danger onSelect={() => setDeleting(p)}>
+              <Trash2 aria-hidden />
+              حذف
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -138,57 +164,56 @@ function PostsList() {
     <>
       <PageHeader
         title="المنشورات"
-        description="كل المواد بحالاتها. المنشورة فقط يستخدمها المساعد كمصدر."
         actions={
-          <Link href="/admin/posts/new" className={buttonVariants()}>
+          <Link href="/admin/posts/new" className={buttonVariants({ size: "lg" })}>
             <Plus aria-hidden />
             منشور جديد
           </Link>
         }
       />
 
-      <Card className="mb-4 p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" aria-hidden />
-            <Input
+      <div role="search" className="mb-5 rounded-lg border border-border bg-surface p-3.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <label className="flex h-[42px] min-w-0 flex-[1_1_260px] items-center gap-2 rounded-[10px] border border-border px-3 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500">
+            <Search className="size-4 shrink-0 text-text-muted" aria-hidden />
+            <span className="sr-only">ابحث في المنشورات</span>
+            <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="ابحث في العنوان والملخص…"
-              className="ps-9"
-              aria-label="بحث في المنشورات"
+              placeholder="ابحث بالعنوان..."
+              className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-text-muted"
               type="search"
             />
-          </div>
-          <Select aria-label="القسم" value={filters.section_id} onChange={(e) => setParams({ section_id: e.target.value })}>
+          </label>
+          <FilterSelect label="القسم" value={filters.section_id} onChange={(v) => setParams({ section_id: v })}>
             <option value="">كل الأقسام</option>
             {sections.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name_ar}
               </option>
             ))}
-          </Select>
-          <Select aria-label="الحالة" value={filters.status} onChange={(e) => setParams({ status: e.target.value })}>
+          </FilterSelect>
+          <FilterSelect label="الحالة" value={filters.status} onChange={(v) => setParams({ status: v })}>
             <option value="">كل الحالات</option>
             {Object.entries(STATUS_LABELS).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
-          </Select>
-          <Select aria-label="النوع" value={filters.content_type} onChange={(e) => setParams({ content_type: e.target.value })}>
+          </FilterSelect>
+          <FilterSelect label="النوع" value={filters.content_type} onChange={(v) => setParams({ content_type: v })}>
             <option value="">كل الأنواع</option>
             {Object.entries(CONTENT_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
-          </Select>
-          <Select aria-label="اللغة" value={filters.lang} onChange={(e) => setParams({ lang: e.target.value })}>
+          </FilterSelect>
+          <FilterSelect label="اللغة" value={filters.lang} onChange={(v) => setParams({ lang: v })}>
             <option value="">كل اللغات</option>
             <option value="en">له نسخة إنجليزية</option>
             <option value="ar_only">عربي فقط</option>
-          </Select>
+          </FilterSelect>
         </div>
         {hasFilters && (
           <div className="mt-3 flex items-center justify-between gap-2 text-sm text-text-secondary">
@@ -206,7 +231,7 @@ function PostsList() {
             </Button>
           </div>
         )}
-      </Card>
+      </div>
 
       {posts.error ? (
         <Card>
@@ -260,5 +285,25 @@ function PostsList() {
         onConfirm={remove}
       />
     </>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0 flex-[1_1_140px] sm:flex-none">
+      <Select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} className="h-[42px] text-sm sm:w-auto sm:min-w-36">
+        {children}
+      </Select>
+    </div>
   );
 }

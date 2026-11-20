@@ -125,6 +125,7 @@ class PublicSection(_Model):
     category: Category
     description: str | None = None
     sort_order: int = 0
+    posts_count: int = 0  # المواد المنشورة في القسم وأقسامه الفرعية
 
 
 class SectionRef(_Model):
@@ -134,30 +135,66 @@ class SectionRef(_Model):
     category: Category
 
 
-class PublicPostItem(_Model):
+class PublicPostCard(_Model):
+    """بطاقة مادة في القوائم. excerpt = الملخص، أو أول سطور النص المنشور نفسه."""
     id: int
     slug: str
     title_ar: str
     title_en: str | None = None
     summary_ar: str | None = None
+    excerpt: str = ""
+    excerpt_en: str | None = None
     tags: list[str] = Field(default_factory=list)
     topic: str | None = None
     content_type: ContentType
+    file_url: str | None = None
+    source_name: str | None = None
     published_at: datetime | None = None
+    has_en: bool = False
+    reading_minutes: int = 0
+    reading_minutes_en: int | None = None
+    section: SectionRef | None = None
 
 
-class PublicSectionPosts(_Model):
-    section: PublicSection
-    items: list[PublicPostItem]
+# للتوافق مع الاسم القديم
+PublicPostItem = PublicPostCard
+
+
+class PublicPostPage(_Model):
+    items: list[PublicPostCard]
     total: int
     page: int
     page_size: int
+
+
+class PublicSectionPosts(PublicPostPage):
+    section: PublicSection
+
+
+class PublicCategoryCount(_Model):
+    category: Category
+    posts_count: int
+    sections_count: int
+
+
+class PublicTopic(_Model):
+    topic: str
+    posts_count: int
+
+
+class PublicReferralCenter(_Model):
+    id: int
+    name: str
+    country: str | None = None
+    url: str | None = None
+    contact: str | None = None
 
 
 class PublicPost(_Model):
     """المادة كاملة كما هي في القاعدة (النص المعتمد حرفياً)."""
     id: int
     slug: str
+    section_id: int
     title_ar: str
     title_en: str | None = None
     content_ar: str
@@ -171,6 +208,8 @@ class PublicPost(_Model):
     file_url: str | None = None
     published_at: datetime | None = None
     updated_at: datetime
+    reading_minutes: int = 0
+    reading_minutes_en: int | None = None
     section: SectionRef
 
 
@@ -178,5 +217,6 @@ __all__ = [
     "LoginRequest", "TokenResponse", "MessageResponse", "User",
     "SectionIn", "SectionUpdate", "SectionAdmin", "Section",
     "PostIn", "PostUpdate", "PostListItem", "PostPage", "Post", "PostWithIndex",
-    "PublicSection", "SectionRef", "PublicPostItem", "PublicSectionPosts", "PublicPost",
+    "PublicSection", "SectionRef", "PublicPostItem", "PublicPostCard", "PublicPostPage", "PublicSectionPosts",
+    "PublicPost", "PublicCategoryCount", "PublicTopic", "PublicReferralCenter",
 ]

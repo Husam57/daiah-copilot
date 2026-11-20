@@ -160,6 +160,7 @@ class ChatLogCreate(_Model):
     score: float | None = None
     is_fallback: bool = False
     feedback: Literal[-1, 1] | None = None  # 1 = مفيد، -1 = غير مفيد
+    ignored: bool = False  # «تجاهل» في الأسئلة غير المجابة
 
 
 class ChatLog(ChatLogCreate):

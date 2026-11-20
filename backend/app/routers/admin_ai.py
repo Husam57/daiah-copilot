@@ -2,6 +2,8 @@
 import re
 from datetime import datetime, timedelta, timezone
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import Field
 
@@ -201,13 +203,28 @@ def _normalize_question(q: str) -> str:
     return " ".join(q.lower().split())
 
 
-@router.get("/unanswered", summary="أسئلة fallback مجمّعة حسب النص (التكرار + آخر تاريخ)")
-def unanswered(limit: int = Query(50, ge=1, le=200)) -> list[dict]:
-    sb = get_supabase()
-    rows = sb.table("chat_logs").select(
-        "question, detected_category, lang, matched_post_id, score, created_at, "
+_PERIODS = {"7d": 7, "30d": 30, "all": None}
+
+
+def _unanswered_rows(period: str = "all") -> list[dict]:
+    """سجلات fallback غير المتجاهلة (الأحدث أولاً) ضمن الفترة."""
+    q = get_supabase().table("chat_logs").select(
+        "id, question, detected_category, lang, matched_post_id, score, created_at, "
         "post:posts(id, slug, title_ar)"
-    ).eq("is_fallback", True).order("created_at", desc=True).limit(2000).execute().data
+    ).eq("is_fallback", True).not_.is_("ignored", "true")  # false أو NULL
+    days = _PERIODS.get(period)
+    if days:
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        q = q.gte("created_at", since)
+    return q.order("created_at", desc=True).limit(2000).execute().data
+
+
+@router.get("/unanswered", summary="أسئلة fallback مجمّعة حسب النص (التكرار + آخر تاريخ)، بدون المتجاهلة")
+def unanswered(
+    limit: int = Query(50, ge=1, le=200),
+    period: Literal["7d", "30d", "all"] = Query("all", description="الفترة: آخر 7 أيام / 30 يوماً / الكل"),
+) -> list[dict]:
+    rows = _unanswered_rows(period)
     groups: dict[str, dict] = {}
     for r in rows:  # مرتبة من الأحدث: أول ظهور = آخر تاريخ
         key = _normalize_question(r["question"])
@@ -221,3 +238,19 @@ def unanswered(limit: int = Query(50, ge=1, le=200)) -> list[dict]:
         else:
             g["count"] += 1
     return sorted(groups.values(), key=lambda g: (g["count"], g["last_at"]), reverse=True)[:limit]
+
+
+class IgnoreRequest(_Model):
+    question: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/unanswered/ignore", summary="تجاهل سؤال غير مجاب (كل سجلاته المتطابقة بعد التطبيع)")
+def ignore_unanswered(body: IgnoreRequest) -> dict:
+    key = _normalize_question(body.question)
+    ids = [r["id"] for r in _unanswered_rows("all") if _normalize_question(r["question"]) == key]
+    if not ids:
+        raise HTTPException(404, "السؤال غير موجود في قائمة الأسئلة غير المجابة")
+    sb = get_supabase()
+    for i in range(0, len(ids), 200):
+        sb.table("chat_logs").update({"ignored": True}).in_("id", ids[i:i + 200]).execute()
+    return {"detail": "تم تجاهل السؤال", "ignored": len(ids)}

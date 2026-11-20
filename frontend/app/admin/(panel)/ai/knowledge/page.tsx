@@ -144,7 +144,7 @@ export default function KnowledgePage() {
         title="قاعدة المعرفة (RAG)"
         description="المنشورات المنشورة فقط تُقسَّم إلى مقاطع وتُفهرس بالمتجهات ليبحث فيها المساعد."
         actions={
-          <Button onClick={() => setConfirm(true)} disabled={rebuilding || !s}>
+          <Button size="lg" onClick={() => setConfirm(true)} disabled={rebuilding || !s}>
             <Hammer aria-hidden />
             إعادة بناء الفهرس بالكامل
           </Button>

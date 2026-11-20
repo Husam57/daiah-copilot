@@ -110,7 +110,7 @@ def stats() -> dict:
         "questions_total": total_logs,
         "fallback_rate_total": rate(total_fallback, total_logs),
         "referral_centers": _count("referral_centers"),
-        "unanswered_questions": len(unanswered(limit=200)),  # أسئلة fallback مميزة (مجمّعة)
+        "unanswered_questions": len(unanswered(limit=200, period="all")),  # أسئلة fallback مميزة غير متجاهلة
     }
 
 

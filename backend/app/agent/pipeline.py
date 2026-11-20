@@ -89,6 +89,7 @@ def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
             "post": payload,
             "related": [_brief(r) for r in results[1:4]],
             "sources": [_brief(r) for r in results],
+            "threshold": cfg.similarity_threshold,
         }
     else:
         guidance = None
@@ -97,6 +98,8 @@ def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
             "message": cfg.fallback_message_en if reply_lang == "en" else cfg.fallback_message_ar,
             "closest": _brief(top) if top else None,
             "referrals": _referrals(),
+            "sources": [_brief(r) for r in results],
+            "threshold": cfg.similarity_threshold,
         }
 
     details = {

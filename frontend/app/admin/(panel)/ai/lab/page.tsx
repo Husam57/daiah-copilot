@@ -1,16 +1,14 @@
 "use client";
 
-import { ChevronDown, FlaskConical, History, Loader2, Play, ScanSearch, Tags, Eye } from "lucide-react";
+import { CheckCircle2, ChevronDown, FlaskConical, History, Info, Loader2, ScanSearch } from "lucide-react";
 import Link from "next/link";
 import { Collapsible } from "radix-ui";
 import { useState } from "react";
 import { ApprovedTextCard, FallbackCard, GuidanceBubble, SourceChip } from "@/components/ui/answer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Segmented } from "@/components/ui/controls";
 import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
-import { Textarea } from "@/components/ui/input";
+import { Select, Textarea } from "@/components/ui/input";
 import { Kbd, PageHeader } from "@/components/ui/misc";
 import { api, errorMessage } from "@/lib/api";
 import { CATEGORY_LABELS, formatNumber, formatScore } from "@/lib/format";
@@ -20,10 +18,11 @@ import { cn } from "@/lib/utils";
 const MAX = 1000;
 const SOURCE_LABEL: Record<string, string> = { model: "النموذج", template: "قالب ثابت", heuristic: "كشف تلقائي" };
 
+/** مختبر الاختبار حسب AdminLab.dc.html: نموذج السؤال ثم 3 مراحل قابلة للطي. */
 export default function LabPage() {
   const [message, setMessage] = useState("");
   const [lang, setLang] = useState<"ar" | "en">("ar");
-  const [result, setResult] = useState<{ q: string; data: LabResult } | null>(null);
+  const [result, setResult] = useState<{ q: string; data: LabResult; ms: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<{ q: string; lang: "ar" | "en"; decision: string }[]>([]);
@@ -33,9 +32,10 @@ export default function LabPage() {
     if (!text || loading) return;
     setLoading(true);
     setError(null);
+    const t0 = performance.now();
     try {
       const data = await api<LabResult>("/api/admin/ai/test", { method: "POST", body: { message: text, lang: l } });
-      setResult({ q: text, data });
+      setResult({ q: text, data, ms: performance.now() - t0 });
       setRecent((r) => [{ q: text, lang: l, decision: data.decision }, ...r.filter((x) => x.q !== text)].slice(0, 6));
     } catch (e) {
       setError(errorMessage(e));
@@ -45,26 +45,33 @@ export default function LabPage() {
   };
 
   return (
-    <>
+    <div className="flex max-w-[1100px] flex-col gap-5">
       <PageHeader
+        className="mb-0"
         title="مختبر الاختبار"
-        description="نفس مسار المساعد تماماً (التصنيف ← البحث ← القرار) دون تسجيل في السجلات. استخدمه لمعايرة العتبة."
+        description="جرّب سؤالاً وشاهد ماذا استرجع النظام، ولماذا، وماذا سيرى المستخدم. الاختبار لا يُسجَّل في سجل الأسئلة."
       />
 
-      <Card className="mb-6 p-5">
+      <Card className="p-4">
         <form
+          className="flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             void run();
           }}
         >
-          <label htmlFor="lab-q" className="text-sm font-medium">
-            السؤال
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="lab-q" className="text-sm font-bold">
+              السؤال
+            </label>
+            <span dir="ltr" className="text-xs tabular-nums text-text-muted">
+              {formatNumber(message.length)}/{formatNumber(MAX)}
+            </span>
+          </div>
           <Textarea
             id="lab-q"
             dir="auto"
-            rows={3}
+            rows={2}
             maxLength={MAX}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -75,31 +82,23 @@ export default function LabPage() {
               }
             }}
             placeholder="اكتب سؤالاً كما سيكتبه المستخدم…"
-            className="mt-1.5 min-h-28 text-body"
+            className="rounded-md p-3 text-base leading-7"
           />
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm text-text-secondary">لغة المادة:</span>
-              <Segmented
-                label="لغة المادة"
-                value={lang}
-                onChange={setLang}
-                size="sm"
-                options={[
-                  { value: "ar", label: "العربية" },
-                  { value: "en", label: "English", lang: "en" },
-                ]}
-              />
-              <span dir="ltr" className="text-xs tabular-nums text-text-muted">
-                {formatNumber(message.length)}/{formatNumber(MAX)}
-              </span>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Select
+              aria-label="لغة المادة"
+              value={lang}
+              onChange={(e) => setLang(e.target.value as "ar" | "en")}
+              className="h-[42px] min-w-48 text-sm"
+            >
+              <option value="ar">لغة المادة: العربية</option>
+              <option value="en">لغة المادة: English</option>
+            </Select>
             <div className="flex items-center gap-3">
               <span className="hidden text-xs text-text-muted sm:inline">
                 <Kbd>Ctrl Enter</Kbd>
               </span>
-              <Button type="submit" loading={loading} disabled={!message.trim()}>
-                {!loading && <Play className="rtl:-scale-x-100" aria-hidden />}
+              <Button type="submit" size="lg" className="px-[22px]" loading={loading} disabled={!message.trim()}>
                 اختبار
               </Button>
             </div>
@@ -132,14 +131,10 @@ export default function LabPage() {
         )}
       </Card>
 
-      {error && (
-        <Alert variant="danger" className="mb-6">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="danger">{error}</Alert>}
 
       {loading && !result ? (
-        <div className="space-y-4" aria-live="polite" aria-busy="true">
+        <div className="flex flex-col gap-4" aria-live="polite" aria-busy="true">
           <p className="flex items-center gap-2 text-sm text-text-secondary">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             يبحث في المحتوى المعتمد…
@@ -156,179 +151,181 @@ export default function LabPage() {
           />
         </Card>
       ) : (
-        <div className={cn("space-y-4 transition-opacity", loading && "opacity-60")} aria-live="polite">
-          <ResultView data={result.data} />
+        <div className={cn("flex flex-col gap-5 transition-opacity", loading && "opacity-60")} aria-live="polite">
+          <ResultView data={result.data} ms={result.ms} />
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 function Stage({
   n,
   title,
-  icon,
-  summary,
+  aside,
   children,
 }: {
   n: number;
   title: string;
-  icon: React.ReactNode;
-  summary?: React.ReactNode;
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <Collapsible.Root open={open} onOpenChange={setOpen}>
-      <Card className="overflow-hidden">
-        <Collapsible.Trigger className="flex w-full items-center gap-3 px-5 py-4 text-start hover:bg-bg">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
-            {n}
-          </span>
-          <span className="text-primary-600 [&_svg]:size-5">{icon}</span>
-          <span className="flex-1 font-bold">{title}</span>
-          {summary && <span className="hidden sm:block">{summary}</span>}
-          <ChevronDown className={cn("size-4 text-text-muted transition-transform", open && "rotate-180")} aria-hidden />
-        </Collapsible.Trigger>
-        <Collapsible.Content className="border-t border-border p-5">{children}</Collapsible.Content>
-      </Card>
+    <Collapsible.Root open={open} onOpenChange={setOpen} asChild>
+      <section aria-label={`المرحلة ${formatNumber(n)}: ${title}`} className="flex flex-col gap-3.5 rounded-lg border border-border bg-surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Collapsible.Trigger className="flex items-center gap-2.5 rounded-sm text-start">
+            <span className="grid size-[26px] shrink-0 place-items-center rounded-full bg-primary-700 text-[13px] font-bold text-white">
+              {formatNumber(n)}
+            </span>
+            <h2 className="text-base font-bold">{title}</h2>
+            <ChevronDown className={cn("size-4 text-text-muted transition-transform", open && "rotate-180")} aria-hidden />
+          </Collapsible.Trigger>
+          {aside}
+        </div>
+        <Collapsible.Content className="flex flex-col gap-3.5">{children}</Collapsible.Content>
+      </section>
     </Collapsible.Root>
   );
 }
 
-function ResultView({ data }: { data: LabResult }) {
+function Chip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span className="rounded-[10px] bg-surface-muted px-3.5 py-2 text-sm">
+      {label}: <b>{children}</b>
+    </span>
+  );
+}
+
+function ResultView({ data, ms }: { data: LabResult; ms: number }) {
   const t = data.threshold;
   const pct = (v: number) => `${Math.max(0, Math.min(1, v)) * 100}%`;
   const preview = data.preview;
   const cat = data.classification.category;
+  const top = data.top_score;
 
   return (
     <>
-      <Stage
-        n={1}
-        title="التحليل"
-        icon={<Tags />}
-        summary={<Badge variant="primary">{cat === "unknown" ? "غير مصنّف" : CATEGORY_LABELS[cat]}</Badge>}
-      >
-        <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <Item label="التصنيف المكتشف" value={cat === "unknown" ? "غير مصنّف (unknown)" : CATEGORY_LABELS[cat]} />
-          <Item label="لغة السؤال" value={data.classification.lang === "en" ? "English" : "العربية"} />
-          <Item label="لغة المادة المطلوبة" value={data.requested_lang === "en" ? "English" : "العربية"} />
-          <Item
-            label="مصدر التصنيف"
-            value={
+      <Stage n={1} title="التحليل">
+        <div className="flex flex-wrap gap-2.5">
+          <Chip label="التصنيف">
+            {cat === "unknown" ? "غير مصنّف" : CATEGORY_LABELS[cat]}{" "}
+            <span className="font-en font-medium text-text-muted" dir="ltr">
+              ({cat})
+            </span>
+          </Chip>
+          <Chip label="لغة السؤال">{data.classification.lang === "en" ? "English" : "العربية"}</Chip>
+          <Chip label="لغة المادة المطلوبة">{data.requested_lang === "en" ? "English" : "العربية"}</Chip>
+          <Chip label="زمن الاستجابة">
+            {(ms / 1000).toLocaleString("ar", { maximumFractionDigits: 1, numberingSystem: "latn" })} ث
+          </Chip>
+          <Chip label="مصدر التصنيف">
+            {SOURCE_LABEL[data.classification.source ?? ""] ?? "—"}
+            {data.classification.model && (
               <>
-                {SOURCE_LABEL[data.classification.source ?? ""] ?? "—"}
-                {data.classification.model && (
-                  <code className="mt-0.5 block font-en text-xs text-text-muted" dir="ltr">
-                    {data.classification.model}
-                  </code>
-                )}
+                {" "}
+                <span className="font-en text-xs font-medium text-text-muted" dir="ltr">
+                  {data.classification.model}
+                </span>
               </>
-            }
-          />
-        </dl>
-        <p className="mt-4 text-xs text-text-muted">التصنيف للتسجيل والتحليل فقط ولا يصفّي البحث.</p>
+            )}
+          </Chip>
+        </div>
+        <p className="text-xs text-text-muted">التصنيف للتسجيل والتحليل فقط ولا يصفّي البحث.</p>
       </Stage>
 
       <Stage
         n={2}
         title="ما استرجعه النظام"
-        icon={<ScanSearch />}
-        summary={
-          <span className="text-sm text-text-secondary">
-            أعلى درجة <b dir="ltr">{formatScore(data.top_score)}</b> · العتبة <b dir="ltr">{t.toFixed(2)}</b>
+        aside={
+          <span className="inline-flex items-center gap-2 text-[13px] text-text-secondary">
+            <span className="h-4 w-0.5 bg-danger" aria-hidden />
+            حد الارتباط <span dir="ltr" className="font-en">{t.toFixed(2)}</span>
+            <span className="text-text-muted">· top_k = {data.top_k}</span>
           </span>
         }
       >
         {data.results.length === 0 ? (
           <EmptyState icon={<ScanSearch />} title="لم يُسترجع أي مقطع" description="الفهرس فارغ أو لا توجد منشورات منشورة." className="py-6" />
         ) : (
-          <>
-            <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-text-secondary">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-4 rounded-full bg-success" aria-hidden /> فوق العتبة
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-4 rounded-full bg-text-muted/50" aria-hidden /> تحت العتبة
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-3 w-0 border-s-2 border-dashed border-danger" aria-hidden /> خط العتبة ({t.toFixed(2)})
-              </span>
-              <span className="text-text-muted">top_k = {data.top_k}</span>
-            </div>
-            <ol className="space-y-3">
-              {data.results.map((r, i) => (
-                <li key={r.post_id} className="rounded-md border border-border p-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        "grid size-6 place-items-center rounded-full text-xs font-bold",
-                        r.above_threshold ? "bg-success-bg text-success" : "bg-surface-muted text-text-muted",
-                      )}
-                    >
-                      {i + 1}
-                    </span>
-                    <Link href={`/admin/posts/${r.post_id}`} className="min-w-0 flex-1 truncate font-bold hover:text-primary-600">
+          <ol className="flex flex-col gap-3.5">
+            {data.results.map((r) => (
+              <li
+                key={r.post_id}
+                className={cn(
+                  "flex flex-col gap-2 rounded-md border p-3.5",
+                  r.above_threshold ? "border-approved-border bg-primary-50" : "border-border bg-surface",
+                )}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Link href={`/admin/posts/${r.post_id}`} className="text-[15px] font-bold hover:text-primary-600">
                       {r.title}
                     </Link>
                     {r.section && <span className="text-xs text-text-muted">{r.section}</span>}
-                    <Badge variant="outline">{r.chunk_lang === "en" ? "EN" : "ع"}</Badge>
-                    <Badge variant={r.above_threshold ? "success" : "neutral"}>
-                      <span dir="ltr" className="tabular-nums">
-                        {formatScore(r.similarity)}
-                      </span>
-                    </Badge>
-                  </div>
-                  {/* الشريط: 0 → 1، وخط العتبة في موضعه */}
-                  <div className="relative h-3 rounded-full bg-surface-muted" aria-hidden>
-                    <div
-                      className={cn("h-full rounded-full", r.above_threshold ? "bg-success" : "bg-text-muted/50")}
-                      style={{ width: pct(r.similarity) }}
-                    />
-                    <div
-                      className="absolute -inset-y-1 w-0 border-s-2 border-dashed border-danger"
-                      style={{ insetInlineStart: pct(t) }}
-                    />
-                  </div>
-                  <span className="sr-only">
-                    {r.above_threshold ? "فوق العتبة" : "تحت العتبة"}: {formatScore(r.similarity)} مقابل {t.toFixed(2)}
+                    <span className="rounded-sm border border-border bg-surface px-1.5 text-[11px] font-bold text-text-secondary">
+                      {r.chunk_lang === "en" ? "EN" : "ع"}
+                    </span>
                   </span>
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-primary-600">أفضل مقطع مطابق</summary>
-                    <p
-                      className="mt-2 whitespace-pre-line rounded-sm bg-surface-muted p-3 text-xs leading-5 text-text-secondary"
-                      dir={r.chunk_lang === "en" ? "ltr" : "rtl"}
-                      lang={r.chunk_lang}
-                    >
-                      {r.best_chunk}
-                    </p>
-                  </details>
-                </li>
-              ))}
-            </ol>
-          </>
+                  <span
+                    className={cn("font-en text-sm font-extrabold tabular-nums", r.above_threshold ? "text-success-fg" : "text-text-muted")}
+                    lang="en"
+                  >
+                    {formatScore(r.similarity)}
+                  </span>
+                </div>
+                {/* الشريط: 0 → 1، وخط العتبة في موضعه (ما فوقه أخضر وما تحته رمادي) */}
+                <div className="relative h-2.5 rounded-full bg-track" aria-hidden>
+                  <div
+                    className={cn("h-full rounded-full", r.above_threshold ? "bg-success" : "bg-text-disabled")}
+                    style={{ width: pct(r.similarity) }}
+                  />
+                  <div className="absolute -inset-y-1 w-0.5 bg-danger" style={{ insetInlineStart: pct(t) }} />
+                </div>
+                <span className="sr-only">
+                  {r.above_threshold ? "فوق العتبة" : "تحت العتبة"}: {formatScore(r.similarity)} مقابل {t.toFixed(2)}
+                </span>
+                <details className="text-[13px] text-text-secondary">
+                  <summary className="cursor-pointer font-bold text-primary-600">عرض المقطع المطابق</summary>
+                  <p
+                    className="mt-2 whitespace-pre-line leading-6"
+                    dir={r.chunk_lang === "en" ? "ltr" : "rtl"}
+                    lang={r.chunk_lang}
+                  >
+                    {r.best_chunk}
+                  </p>
+                </details>
+              </li>
+            ))}
+          </ol>
         )}
       </Stage>
 
       <Stage
         n={3}
         title="ما سيراه المستخدم"
-        icon={<Eye />}
-        summary={
-          data.decision === "match" ? <Badge variant="success">تطابق</Badge> : <Badge variant="warning">بدائل</Badge>
+        aside={
+          data.decision === "match" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-sm bg-success-bg px-3 py-1 text-[13px] font-bold text-success-fg">
+              <CheckCircle2 className="size-4" aria-hidden />
+              تطابق — <span dir="ltr">{formatScore(top)}</span> أعلى من العتبة
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-sm bg-warning-bg px-3 py-1 text-[13px] font-bold text-warning-fg">
+              <Info className="size-4" aria-hidden />
+              بدائل — {top === null ? "لا نتائج" : <><span dir="ltr">{formatScore(top)}</span> أقل من العتبة</>}
+            </span>
+          )
         }
       >
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          {data.decision === "match" ? <Badge variant="success">تطابق</Badge> : <Badge variant="warning">بدائل (fallback)</Badge>}
-          <span className="text-text-muted">
-            {data.decision === "match"
-              ? `جملة التوجيه من: ${SOURCE_LABEL[data.guidance_source ?? ""] ?? "—"}`
-              : "لا توجد مادة فوق العتبة"}{" "}
-            · إعدادات الإصدار {data.settings_version}
-          </span>
-        </div>
-        <div className="mx-auto max-w-3xl space-y-4 rounded-lg bg-bg p-4 md:p-6">
+        <p className="text-xs text-text-muted">
+          {data.decision === "match"
+            ? `جملة التوجيه من: ${SOURCE_LABEL[data.guidance_source ?? ""] ?? "—"}`
+            : "لا توجد مادة فوق العتبة، فتظهر رسالة عدم التوفر مع أقرب مادة والمراكز."}{" "}
+          · إعدادات الإصدار {formatNumber(data.settings_version)}
+        </p>
+        <div className="flex flex-col gap-3 rounded-[14px] border border-dashed border-border-strong bg-bg p-4 md:p-5">
           {preview.type === "match" ? (
             <>
               <GuidanceBubble text={preview.guidance} lang={data.classification.lang} />
@@ -368,14 +365,5 @@ function ResultView({ data }: { data: LabResult }) {
         </div>
       </Stage>
     </>
-  );
-}
-
-function Item({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-md bg-surface-muted px-3 py-2.5">
-      <dt className="text-xs text-text-muted">{label}</dt>
-      <dd className="mt-0.5 font-medium text-text">{value}</dd>
-    </div>
   );
 }
