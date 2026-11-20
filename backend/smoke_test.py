@@ -9,7 +9,9 @@ import sys
 from fastapi.testclient import TestClient
 
 from app.config import redact, settings
+from app.db import get_supabase
 from app.main import app
+from app.security import hash_password
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -21,9 +23,9 @@ results: list[bool] = []
 
 
 def step(name: str, ok: bool, info: str = "") -> bool:
-    results.append(ok)
+    results.append(bool(ok))
     print(f"{'✅' if ok else '❌'} {name}" + (f" — {redact(info)}" if info else ""))
-    return ok
+    return bool(ok)
 
 
 def detail(r) -> str:
@@ -121,6 +123,10 @@ def main() -> int:
 
         r = client.delete(f"/api/admin/sections/{section_id}", headers=headers)
         step("حذف قسم فيه منشورات يُرفض", r.status_code == 409, detail(r))
+
+        # 6) سير المراجعة + فلاتر اللوحة + حسابي (الخطوة 6)
+        workflow_checks(headers, section_id, post_id)
+        account_checks(tag)
     finally:
         # 6) التنظيف
         if post_id is not None:
@@ -133,6 +139,78 @@ def main() -> int:
     passed = sum(results)
     print(f"\n{'🎉' if all(results) else '⚠️ '} {passed}/{len(results)} خطوة نجحت")
     return 0 if all(results) else 1
+
+
+def workflow_checks(headers: dict, section_id: int, post_id: int) -> None:
+    r = client.get(f"/api/admin/posts/{post_id}", headers=headers)
+    step("GET منشور واحد مع اسم المحرر والمراجع", r.status_code == 200
+         and r.json().get("created_by_name") and r.json().get("reviewed_by_name"),
+         f"{r.json().get('created_by_name')} / {r.json().get('reviewed_by_name')}" if r.is_success else detail(r))
+
+    def total(**params) -> int | None:
+        r = client.get("/api/admin/posts", headers=headers, params={"section_id": section_id, **params})
+        return r.json()["total"] if r.is_success else None
+
+    step("فلتر اللغة: en = 0 و ar_only = 1 (المنشور بلا نسخة إنجليزية)",
+         total(lang="en") == 0 and total(lang="ar_only") == 1)
+
+    r = client.post(f"/api/admin/posts/{post_id}/return-to-draft", headers=headers,
+                    json={"note": "ملاحظة مراجعة تجريبية"})
+    b = r.json() if r.is_success else {}
+    step("إرجاع منشور منشور إلى مسودة", r.status_code == 200 and b.get("status") == "draft"
+         and b.get("published_at") is None and b.get("indexed_at") is None,
+         f"note_saved={b.get('note_saved')}" if r.is_success else detail(r))
+    r = client.post(f"/api/admin/posts/{post_id}/return-to-draft", headers=headers)
+    step("إرجاع مسودة إلى مسودة يُرفض", r.status_code == 400, detail(r))
+
+    r = client.put(f"/api/admin/posts/{post_id}", headers=headers, json={"status": "review"})
+    step("إرسال للمراجعة", r.status_code == 200 and r.json()["status"] == "review", detail(r))
+    step("GET /api/admin/posts?status=review يرجعه", total(status="review") == 1 and total(status="draft") == 0)
+    r = client.post(f"/api/admin/posts/{post_id}/return-to-draft", headers=headers, json={})
+    step("إرجاع منشور قيد المراجعة إلى مسودة (بدون ملاحظة)",
+         r.status_code == 200 and r.json()["status"] == "draft", detail(r))
+
+    r = client.get("/api/admin/dashboard/activity", headers=headers)
+    step("GET /api/admin/dashboard/activity", r.status_code == 200
+         and any(e.get("post_id") == post_id for e in r.json()), f"{len(r.json())} حدث" if r.is_success else detail(r))
+    r = client.get("/api/admin/dashboard/system-status", headers=headers, params={"refresh": "true"})
+    b = r.json() if r.is_success else {}
+    step("GET /api/admin/dashboard/system-status", r.status_code == 200 and len(b.get("items", [])) == 4
+         and b["items"][0]["state"] == "ok",
+         ", ".join(f"{i['key']}={i['state']}" for i in b.get("items", [])) if r.is_success else detail(r))
+
+
+def account_checks(tag: str) -> None:
+    """حسابي: على مستخدم مؤقت (لا يُمس حساب المدير)، ويُحذف في النهاية."""
+    sb = get_supabase()
+    email, pw, new_pw = f"tmp-{tag}@example.com", f"Tmp-{tag}-pass1", f"Tmp-{tag}-pass2"
+    uid = sb.table("users").insert({"name": "مستخدم مؤقت", "email": email,
+                                    "password_hash": hash_password(pw), "role": "editor"}).execute().data[0]["id"]
+    try:
+        r = client.post("/api/auth/login", json={"email": email, "password": pw})
+        if not step("دخول مستخدم مؤقت", r.status_code == 200, detail(r)):
+            return
+        h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+        r = client.put("/api/auth/me", headers=h, json={"name": "اسم معدّل"})
+        step("PUT /api/auth/me (الاسم)", r.status_code == 200 and r.json()["name"] == "اسم معدّل", detail(r))
+        r = client.put("/api/auth/me", headers=h, json={"email": settings.admin_email})
+        step("PUT /api/auth/me ببريد مستخدم آخر → 409", r.status_code == 409, detail(r))
+        new_email = f"tmp2-{tag}@Example.com"
+        r = client.put("/api/auth/me", headers=h, json={"email": new_email})
+        step("PUT /api/auth/me (البريد، يُحفظ بأحرف صغيرة)", r.status_code == 200
+             and r.json()["email"] == new_email.lower(), detail(r))
+        r = client.put("/api/auth/me/password", headers=h, json={"current_password": "wrong", "new_password": new_pw})
+        step("تغيير كلمة المرور بكلمة حالية خاطئة → 400", r.status_code == 400, detail(r))
+        r = client.put("/api/auth/me/password", headers=h, json={"current_password": pw, "new_password": "short"})
+        step("كلمة مرور جديدة قصيرة → 422", r.status_code == 422, detail(r))
+        r = client.put("/api/auth/me/password", headers=h, json={"current_password": pw, "new_password": new_pw})
+        step("PUT /api/auth/me/password", r.status_code == 200, detail(r))
+        ok_new = client.post("/api/auth/login", json={"email": new_email, "password": new_pw}).status_code == 200
+        ok_old = client.post("/api/auth/login", json={"email": new_email, "password": pw}).status_code == 401
+        step("الدخول بكلمة المرور الجديدة فقط", ok_new and ok_old)
+    finally:
+        sb.table("users").delete().eq("id", uid).execute()
+        step("حذف المستخدم المؤقت", True)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,8 @@ def main() -> int:
     log_ids: list[int] = []
     created = create_fixtures(headers, with_centers=True)
     original_settings = client.get("/api/admin/ai/settings", headers=headers).json()
+    hist_before = get_supabase().table("ai_settings_history").select("id").order("id", desc=True).limit(1).execute().data
+    hist_max = hist_before[0]["id"] if hist_before else 0
     try:
         if len(created["posts"]) != 3:
             return summary()
@@ -142,8 +144,25 @@ def main() -> int:
              and r.json()["top_k"] == 4, f"version {v0} → {r.json().get('version')}" if r.is_success else detail(r))
         r = client.put("/api/admin/ai/settings", headers=headers, json={"similarity_threshold": 1.5})
         step("عتبة خارج 0..1 تُرفض", r.status_code == 422, detail(r))
-        r = client.put("/api/admin/ai/settings", headers=headers, json={"top_k": original_settings["top_k"]})
-        step("إرجاع top_k الأصلي", r.status_code == 200 and r.json()["top_k"] == original_settings["top_k"], detail(r))
+        r = client.get("/api/admin/ai/settings/history", headers=headers)
+        hist = r.json() if r.is_success else []
+        prev = hist[0] if hist else {}
+        step("الحفظ ينسخ الإصدار السابق إلى ai_settings_history", r.status_code == 200
+             and prev.get("version") == v0 and prev.get("top_k") == original_settings["top_k"]
+             and prev.get("saved_at"), f"آخر سجل: version={prev.get('version')}" if r.is_success else detail(r))
+        s1 = client.get("/api/admin/ai/settings", headers=headers).json()
+        step("updated_at و updated_by يتحدثان", bool(s1.get("updated_at"))
+             and s1.get("updated_at") != original_settings.get("updated_at") and bool(s1.get("updated_by_user")),
+             f"updated_at={s1.get('updated_at')}")
+        r = client.post(f"/api/admin/ai/settings/restore/{prev.get('id', 0)}", headers=headers)
+        b = r.json() if r.is_success else {}
+        step("استرجاع إصدار سابق (كإصدار جديد)", r.status_code == 200 and b.get("top_k") == original_settings["top_k"]
+             and b.get("version") == v0 + 2 and b.get("restored_from_version") == v0,
+             f"version={b.get('version')}" if r.is_success else detail(r))
+        r = client.post("/api/admin/ai/settings/restore/999999999", headers=headers)
+        step("استرجاع إصدار غير موجود → 404", r.status_code == 404, detail(r))
+        r = client.put("/api/admin/ai/settings", headers=headers, json={})
+        step("PUT بدون حقول → 400", r.status_code == 400, detail(r))
 
         # ---------- logs / unanswered / stats ----------
         r = client.get("/api/admin/ai/logs", headers=headers, params={"fallback": "true"})
@@ -187,6 +206,9 @@ def main() -> int:
         print()
         n = get_supabase().table("chat_logs").delete().eq("session_id", session).execute().data
         step("حذف سجلات المحادثة التجريبية", True, f"{len(n or [])} سجل")
+        # الإعدادات رجعت لقيمها الأصلية؛ نحذف نسخ السجل التي أنشأها الاختبار فقط
+        h = get_supabase().table("ai_settings_history").delete().gt("id", hist_max).execute().data
+        step("حذف نسخ سجل الإعدادات التجريبية", True, f"{len(h or [])} نسخة")
         cleanup(headers, created)
     return summary()
 

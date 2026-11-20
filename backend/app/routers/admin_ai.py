@@ -1,15 +1,15 @@
 """إدارة الذكاء الاصطناعي (JWT): الفهرس، الإعدادات، المختبر، السجلات، الأسئلة غير المجابة."""
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import Field
 
 from ..agent.pipeline import run_agent
 from ..ai_config import get_active_settings
 from ..config import CHAT_MODELS, EMBEDDING_DIM, EMBEDDING_MODEL
 from ..db import get_supabase
-from ..models import Lang, _Model
+from ..models import AISettings, Lang, _Model
 from ..rag.indexer import reindex_all
 from ..schemas import User
 from ..security import require_admin_user
@@ -24,6 +24,12 @@ router = APIRouter(
 # إذا عُدّل المنشور بعد آخر فهرسة بأكثر من هذا -> "يحتاج إعادة فهرسة"
 # (هامش لأن تحديث indexed_at قد يغيّر updated_at إن لم يُطبَّق trigger الجديد)
 STALE_TOLERANCE = timedelta(seconds=30)
+
+# الحقول التي تُنسخ إلى ai_settings_history قبل كل تعديل
+HISTORY_FIELDS = (
+    "version", "guidance_prompt", "similarity_threshold", "top_k",
+    "fallback_message_ar", "fallback_message_en", "updated_by",
+)
 
 
 def _ts(v: str | None) -> datetime | None:
@@ -88,13 +94,37 @@ class AISettingsUpdate(_Model):
     fallback_message_en: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
+def _user_names(ids: set[int]) -> dict[int, dict]:
+    ids = {i for i in ids if i}
+    if not ids:
+        return {}
+    rows = get_supabase().table("users").select("id, name").in_("id", list(ids)).execute().data
+    return {r["id"]: r for r in rows}
+
+
 def _settings_out(row: dict) -> dict:
-    updater = None
-    if row.get("updated_by"):
-        u = get_supabase().table("users").select("id, name").eq("id", row["updated_by"]).limit(1).execute().data
-        updater = u[0] if u else None
+    updater = _user_names({row.get("updated_by")}).get(row.get("updated_by"))
     return {**row, "updated_by_user": updater, "chat_models": list(CHAT_MODELS),
             "embedding_model": EMBEDDING_MODEL}
+
+
+def _snapshot(current: AISettings) -> None:
+    """ينسخ الصف الحالي إلى ai_settings_history قبل أي تعديل (لا يُفقد أي إصدار)."""
+    get_supabase().table("ai_settings_history").insert({
+        f: getattr(current, f) for f in HISTORY_FIELDS
+    }).execute()
+
+
+def _save(current: AISettings, data: dict, user: User) -> dict:
+    _snapshot(current)
+    data = {
+        **data,
+        "version": current.version + 1,
+        "updated_by": user.id,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    row = get_supabase().table("ai_settings").update(data).eq("id", current.id).execute().data[0]
+    return _settings_out(row)
 
 
 @router.get("/settings", summary="إعدادات الذكاء الاصطناعي الفعّالة")
@@ -102,15 +132,39 @@ def get_settings() -> dict:
     return _settings_out(get_active_settings().model_dump())
 
 
-@router.put("/settings", summary="تعديل الإعدادات (كل حفظ يزيد version)")
+@router.put("/settings", summary="تعديل الإعدادات (يحفظ نسخة في السجل ثم يزيد version)")
 def update_settings(body: AISettingsUpdate, user: User = Depends(require_admin_user)) -> dict:
     current = get_active_settings()
-    data = body.model_dump(exclude_unset=True)
-    data = {k: v for k, v in data.items() if v is not None}
-    data["version"] = current.version + 1
-    data["updated_by"] = user.id
-    row = get_supabase().table("ai_settings").update(data).eq("id", current.id).execute().data[0]
-    return _settings_out(row)
+    data = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if not data:
+        raise HTTPException(400, "لم تُرسل أي حقول للتعديل")
+    return _save(current, data, user)
+
+
+@router.get("/settings/history", summary="سجل إصدارات الإعدادات (الأحدث أولاً)")
+def settings_history(limit: int = Query(50, ge=1, le=200)) -> list[dict]:
+    rows = (
+        get_supabase().table("ai_settings_history").select("*")
+        .order("version", desc=True).order("id", desc=True).limit(limit).execute().data
+    )
+    names = _user_names({r.get("updated_by") for r in rows})
+    return [{**r, "updated_by_user": names.get(r.get("updated_by"))} for r in rows]
+
+
+@router.post("/settings/restore/{history_id}", summary="استرجاع إصدار سابق (كإصدار جديد)")
+def restore_settings(history_id: int, user: User = Depends(require_admin_user)) -> dict:
+    rows = (
+        get_supabase().table("ai_settings_history").select("*")
+        .eq("id", history_id).limit(1).execute().data
+    )
+    if not rows:
+        raise HTTPException(404, "الإصدار المطلوب غير موجود في السجل")
+    old = rows[0]
+    current = get_active_settings()
+    data = {f: old[f] for f in HISTORY_FIELDS if f not in ("version", "updated_by")}
+    out = _save(current, data, user)
+    out["restored_from_version"] = old["version"]
+    return out
 
 
 # ============ المختبر ============

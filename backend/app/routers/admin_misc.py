@@ -1,9 +1,15 @@
-"""لوحة التحكم (JWT): المراكز المعتمدة (CRUD) + إحصاءات الرئيسية."""
-from datetime import datetime, timezone
+"""لوحة التحكم (JWT): المراكز المعتمدة (CRUD) + إحصاءات الرئيسية + النشاط + حالة النظام."""
+import threading
+import time
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from ..ai_config import get_active_settings
+from ..config import CHAT_MODELS, EMBEDDING_MODEL, redact
 from ..db import get_supabase
+from ..rag.embeddings import get_genai_client
+from .admin_ai import unanswered
 from ..models import ReferralCenter, ReferralCenterCreate, _Model
 from ..schemas import MessageResponse
 from ..security import require_admin_user
@@ -104,4 +110,127 @@ def stats() -> dict:
         "questions_total": total_logs,
         "fallback_rate_total": rate(total_fallback, total_logs),
         "referral_centers": _count("referral_centers"),
+        "unanswered_questions": len(unanswered(limit=200)),  # أسئلة fallback مميزة (مجمّعة)
     }
+
+
+# ============ آخر النشاطات ============
+def _ts(v: str | None) -> datetime | None:
+    return datetime.fromisoformat(v.replace("Z", "+00:00")) if v else None
+
+
+@dashboard.get("/activity", summary="آخر النشاطات (مشتقة من المنشورات وسجل الإعدادات)")
+def activity(limit: int = Query(12, ge=1, le=50)) -> list[dict]:
+    """لا يوجد جدول نشاط: الأحداث تُشتق من published_at / indexed_at / updated_at
+    للمنشورات، ومن ai_settings_history (كل صف = انتقال إلى إصدار جديد)."""
+    sb = get_supabase()
+    posts = (
+        sb.table("posts").select("id, title_ar, status, published_at, updated_at, indexed_at")
+        .order("updated_at", desc=True).limit(40).execute().data
+    )
+    events: list[dict] = []
+    for p in posts:
+        ref = {"post_id": p["id"], "title": p["title_ar"]}
+        pub, idx, upd = _ts(p["published_at"]), _ts(p["indexed_at"]), _ts(p["updated_at"])
+        if pub:
+            events.append({"type": "post_published", "at": p["published_at"], **ref})
+        if idx:
+            events.append({"type": "index_updated", "at": p["indexed_at"], **ref})
+        # التعديل يُعرض فقط إن لم يكن هو نفسه لحظة النشر/الفهرسة
+        if upd and all(not t or abs((upd - t).total_seconds()) > 5 for t in (pub, idx)):
+            kind = "post_review" if p["status"] == "review" else "post_saved"
+            events.append({"type": kind, "at": p["updated_at"], **ref})
+    hist = (
+        sb.table("ai_settings_history").select("version, saved_at")
+        .order("saved_at", desc=True).limit(20).execute().data
+    )
+    for h in hist:
+        events.append({"type": "settings_updated", "at": h["saved_at"], "version": h["version"] + 1})
+    events.sort(key=lambda e: _ts(e["at"]) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    return events[:limit]
+
+
+# ============ حالة النظام ============
+_STATUS_TTL = 60.0  # ثوانٍ: فحص Gemini لا يتكرر مع كل تحميل للصفحة
+_status_cache: dict = {"at": 0.0, "data": None}
+_status_lock = threading.Lock()
+STALE_TOLERANCE = timedelta(seconds=30)
+
+
+def _check(fn) -> tuple[bool, str, int]:
+    t0 = time.perf_counter()
+    try:
+        detail = fn()
+        return True, detail, int((time.perf_counter() - t0) * 1000)
+    except Exception as e:  # noqa: BLE001
+        return False, redact(str(e))[:160], int((time.perf_counter() - t0) * 1000)
+
+
+def _db_check() -> str:
+    get_supabase().table("users").select("id").limit(1).execute()
+    return "متصلة"
+
+
+def _gemini_check() -> str:
+    # طلب بيانات النموذج فقط (لا يستهلك حصة توليد أو embeddings)
+    get_genai_client().models.get(model=EMBEDDING_MODEL)
+    return "المفتاح يعمل"
+
+
+def _index_check() -> tuple[str, str]:
+    rows = get_supabase().table("posts").select("updated_at, indexed_at").eq("status", "published").execute().data
+    if not rows:
+        return "warning", "لا توجد منشورات منشورة بعد"
+    pending = sum(1 for r in rows if not r["indexed_at"])
+    stale = sum(
+        1 for r in rows if r["indexed_at"]
+        and _ts(r["updated_at"]) - _ts(r["indexed_at"]) > STALE_TOLERANCE
+    )
+    if pending or stale:
+        return "warning", f"{pending} بانتظار الفهرسة · {stale} يحتاج تحديث"
+    return "ok", f"{len(rows)} منشور مفهرس"
+
+
+def _compute_status() -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    db_ok, db_detail, db_ms = _check(_db_check)
+    ai_ok, ai_detail, ai_ms = _check(_gemini_check)
+    if db_ok:
+        try:
+            idx_state, idx_detail = _index_check()
+        except Exception as e:  # noqa: BLE001
+            idx_state, idx_detail = "down", redact(str(e))[:160]
+        settings_ok, settings_detail, _ = _check(lambda: f"الإعدادات الإصدار {get_active_settings().version}")
+    else:
+        idx_state, idx_detail = "down", "قاعدة البيانات غير متاحة"
+        settings_ok, settings_detail = False, "قاعدة البيانات غير متاحة"
+    if db_ok and ai_ok and settings_ok:
+        agent_state, agent_detail = "ok", settings_detail
+    elif not settings_ok:
+        agent_state, agent_detail = "down", settings_detail
+    else:
+        agent_state, agent_detail = "down", "يتطلب قاعدة البيانات و Gemini"
+    items = [
+        {"key": "database", "label": "قاعدة البيانات", "state": "ok" if db_ok else "down",
+         "detail": db_detail, "latency_ms": db_ms},
+        {"key": "gemini", "label": "Gemini API", "state": "ok" if ai_ok else "down",
+         "detail": ai_detail, "latency_ms": ai_ms},
+        {"key": "index", "label": "فهرس المتجهات", "state": idx_state, "detail": idx_detail},
+        {"key": "agent", "label": "المساعد", "state": agent_state, "detail": agent_detail},
+    ]
+    overall = "down" if any(i["state"] == "down" for i in items) else (
+        "warning" if any(i["state"] == "warning" for i in items) else "ok")
+    return {"overall": overall, "checked_at": now, "items": items,
+            "chat_models": list(CHAT_MODELS), "embedding_model": EMBEDDING_MODEL}
+
+
+@dashboard.get("/system-status", summary="حالة النظام (مخزنة 60 ث؛ refresh=true لفحص فوري)")
+def system_status(refresh: bool = False) -> dict:
+    with _status_lock:
+        cached = _status_cache["data"]
+        if cached and not refresh and time.monotonic() - _status_cache["at"] < _STATUS_TTL:
+            return cached
+    data = _compute_status()
+    with _status_lock:
+        _status_cache.update(at=time.monotonic(), data=data)
+    return data

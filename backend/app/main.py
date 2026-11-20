@@ -54,7 +54,7 @@ _DEFAULT_HTTP_MESSAGES = {
 
 _VALIDATION_MESSAGES = {
     "missing": "حقل مطلوب",
-    "string_too_short": "لا يمكن أن يكون فارغاً",
+    "string_too_long": "النص أطول من المسموح",
     "string_pattern_mismatch": "صيغة غير صحيحة (حروف إنجليزية صغيرة وأرقام وشرطات فقط)",
     "string_type": "يجب أن يكون نصاً",
     "int_parsing": "يجب أن يكون رقماً صحيحاً",
@@ -74,6 +74,9 @@ def _validation_message(err: dict) -> str:
     if t == "literal_error":
         expected = str(err.get("ctx", {}).get("expected", "")).replace(" or ", "، ")
         return "قيمة غير مسموحة. المسموح: " + expected
+    if t == "string_too_short":
+        n = err.get("ctx", {}).get("min_length", 1)
+        return "لا يمكن أن يكون فارغاً" if n <= 1 else f"يجب ألا يقل عن {n} أحرف"
     if t == "value_error" and "email" in str(err.get("msg", "")).lower():
         return "بريد إلكتروني غير صحيح"
     return _VALIDATION_MESSAGES.get(t, "قيمة غير صحيحة")

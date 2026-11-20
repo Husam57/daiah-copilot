@@ -1,12 +1,15 @@
 """إدارة المنشورات (لوحة التحكم — JWT مطلوب)."""
 import logging
+from typing import Literal
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from postgrest.exceptions import APIError
+from pydantic import Field
 
 from ..config import redact
 from ..db import get_supabase
-from ..models import ContentType, PostStatus
+from ..models import ContentType, PostStatus, _Model
 from ..rag.indexer import index_post, unindex_post
 from ..schemas import (
     MessageResponse, Post, PostIn, PostListItem, PostPage, PostUpdate, PostWithIndex, User,
@@ -50,6 +53,22 @@ def _get_or_404(post_id: int) -> dict:
     return rows[0]
 
 
+def _update_with_note(post_id: int, data: dict, note: str | None) -> bool:
+    """تحديث مع review_note إن كان العمود موجوداً. يرجع True إن حُفظت الملاحظة.
+
+    العمود اختياري (ALTER في schema.sql): إن لم يُضف بعد يتم التحديث بدونه.
+    """
+    sb = get_supabase()
+    try:
+        sb.table("posts").update({**data, "review_note": note}).eq("id", post_id).execute()
+        return True
+    except APIError as e:
+        if e.code not in ("PGRST204", "42703"):  # العمود غير موجود
+            raise
+    sb.table("posts").update(data).eq("id", post_id).execute()
+    return False
+
+
 def _check_section(section_id: int) -> None:
     rows = get_supabase().table("sections").select("id").eq("id", section_id).limit(1).execute().data
     if not rows:
@@ -61,6 +80,8 @@ def list_posts(
     section_id: int | None = None,
     status_: PostStatus | None = Query(None, alias="status"),
     content_type: ContentType | None = None,
+    lang: Literal["en", "ar_only"] | None = Query(
+        None, description="en = له نسخة إنجليزية، ar_only = عربي فقط"),
     q: str | None = Query(None, description="بحث في العنوان والملخص"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -72,6 +93,10 @@ def list_posts(
         query = query.eq("status", status_)
     if content_type:
         query = query.eq("content_type", content_type)
+    if lang == "en":
+        query = query.not_.is_("content_en", "null")
+    elif lang == "ar_only":
+        query = query.is_("content_en", "null")
     term = clean_search(q)
     if term:
         query = query.or_(
@@ -88,9 +113,21 @@ def list_posts(
     )
 
 
-@router.get("/{post_id}", response_model=Post, summary="منشور واحد كاملاً")
-def get_post(post_id: int) -> Post:
-    return Post(**_get_or_404(post_id))
+class PostDetail(Post):
+    created_by_name: str | None = None
+    reviewed_by_name: str | None = None
+
+
+@router.get("/{post_id}", response_model=PostDetail, summary="منشور واحد كاملاً (مع أسماء المحرر والمراجع)")
+def get_post(post_id: int) -> PostDetail:
+    row = _get_or_404(post_id)
+    ids = [i for i in (row.get("created_by"), row.get("reviewed_by")) if i]
+    names = {}
+    if ids:
+        names = {u["id"]: u["name"] for u in get_supabase().table("users").select("id, name")
+                 .in_("id", ids).execute().data}
+    return PostDetail(**row, created_by_name=names.get(row.get("created_by")),
+                      reviewed_by_name=names.get(row.get("reviewed_by")))
 
 
 @router.post("", response_model=Post, status_code=201, summary="إنشاء منشور (مسودة أو مراجعة)")
@@ -156,9 +193,44 @@ def publish_post(post_id: int, user: User = Depends(require_admin_user)) -> Post
         "published_at": datetime.now(timezone.utc).isoformat(),
         "reviewed_by": user.id,
     }
-    get_supabase().table("posts").update(data).eq("id", post_id).execute()
+    _update_with_note(post_id, data, None)  # النشر يمسح ملاحظة المراجع السابقة
     result, warning = _try_index(post_id)
     return _with_index(post_id, result, warning)
+
+
+class ReturnToDraftRequest(_Model):
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class ReturnToDraftResponse(PostWithIndex):
+    note_saved: bool = False
+
+
+@router.post(
+    "/{post_id}/return-to-draft", response_model=ReturnToDraftResponse,
+    summary="إرجاع منشور (قيد المراجعة أو منشور) إلى مسودة مع ملاحظة المراجع",
+)
+def return_to_draft(
+    post_id: int, body: ReturnToDraftRequest | None = None,
+    user: User = Depends(require_admin_user),
+) -> ReturnToDraftResponse:
+    post = _get_or_404(post_id)
+    if post["status"] == "draft":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "المنشور مسودة بالفعل")
+    was_published = post["status"] == "published"
+    data: dict = {"status": "draft", "reviewed_by": user.id}
+    if was_published:
+        data["published_at"] = None
+    note = (body.note or "").strip() or None if body else None
+    note_saved = _update_with_note(post_id, data, note)
+    warning = None
+    if was_published:
+        try:
+            unindex_post(post_id)
+        except Exception as e:  # noqa: BLE001 — البحث يستبعد غير المنشور على أي حال
+            warning = f"أُلغي النشر لكن تعذّر حذف المقاطع: {redact(str(e))[:200]}"
+    out = _with_index(post_id, None, warning)
+    return ReturnToDraftResponse(**out.model_dump(), note_saved=note_saved or note is None)
 
 
 @router.post(

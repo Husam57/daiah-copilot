@@ -73,6 +73,7 @@ class PostCreate(_Model):
 
 class Post(PostCreate):
     id: int
+    review_note: str | None = None  # ملاحظة المراجع عند الإرجاع لمسودة (عمود اختياري)
     created_by: int | None = None
     reviewed_by: int | None = None
     published_at: datetime | None = None
@@ -120,6 +121,21 @@ class AISettingsCreate(_Model):
 
 class AISettings(AISettingsCreate):
     id: int
+    updated_at: datetime | None = None
+
+
+# ---------- ai_settings_history ----------
+class AISettingsHistory(_Model):
+    """نسخة من صف ai_settings كما كان قبل تعديله (تُحفظ قبل كل PUT/استرجاع)."""
+    id: int
+    version: int
+    guidance_prompt: str
+    similarity_threshold: float
+    top_k: int
+    fallback_message_ar: str
+    fallback_message_en: str
+    updated_by: int | None = None
+    saved_at: datetime
 
 
 # ---------- referral_centers ----------

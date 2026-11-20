@@ -24,7 +24,7 @@ CHAT_TIMEOUT_MS = 15_000  # مهلة كل محاولة توليد
 
 TABLES = (
     "users", "sections", "posts", "post_chunks",
-    "ai_settings", "referral_centers", "chat_logs",
+    "ai_settings", "ai_settings_history", "referral_centers", "chat_logs",
 )
 
 
