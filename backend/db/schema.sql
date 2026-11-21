@@ -235,5 +235,93 @@ $$;
 REVOKE EXECUTE ON FUNCTION match_post_chunks(vector, int, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION match_post_chunks(vector, int, text) TO service_role;
 
+-- ============ البحث الهجين (دلالي + نصي) ============
+-- pg_trgm للبحث النصي التقريبي على نص موحَّد (لا يغيّر chunk_text المعروض).
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- نفس قواعد backend/app/rag/normalize.py: NFKC، حذف التشكيل والتطويل، أ إ آ ٱ ← ا، ى ← ي، ة ← ه، توحيد المسافات
+CREATE OR REPLACE FUNCTION daiah_normalize_ar(t text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = public, extensions
+AS $$
+    SELECT btrim(regexp_replace(
+        translate(
+            regexp_replace(normalize(coalesce(t, ''), NFKC),
+                           '[ؐ-ًؚ-ٰٟۖ-ۭ࣓-ࣿـ]', '', 'g'),
+            'أإآٱىة', 'اااايه'),
+        '\s+', ' ', 'g'));
+$$;
+
+-- عمود محسوب تلقائياً (يُملأ للصفوف الموجودة والجديدة؛ الـ Backend لا يرسله)
+ALTER TABLE post_chunks ADD COLUMN IF NOT EXISTS search_text TEXT
+    GENERATED ALWAYS AS (daiah_normalize_ar(chunk_text)) STORED;
+CREATE INDEX IF NOT EXISTS ix_post_chunks_search_trgm
+    ON post_chunks USING gin (search_text gin_trgm_ops);
+
+-- أفضل match_count مقطعاً دلالياً + أفضل match_count مقطعاً نصياً (word_similarity ≥ text_min)،
+-- مع رتبة كل مقطع في كل قائمة. similarity دائماً دلالية (العتبة تُطبَّق عليها)؛ الدمج RRF في الـ Backend.
+CREATE OR REPLACE FUNCTION match_post_chunks_hybrid(
+    query_embedding vector(768),
+    query_text      text,
+    match_count     int,
+    lang            text,
+    text_min        double precision DEFAULT 0.2
+)
+RETURNS TABLE (
+    post_id bigint, chunk_text text, similarity double precision,
+    text_score double precision, sem_rank int, text_rank int
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+    WITH base AS (
+        SELECT c.id, c.post_id, c.chunk_text, c.search_text, c.embedding
+        FROM post_chunks c
+        JOIN posts p ON p.id = c.post_id
+        WHERE p.status = 'published'
+          AND c.lang = match_post_chunks_hybrid.lang
+          AND c.embedding IS NOT NULL
+    ),
+    sem AS (
+        SELECT s.*, row_number() OVER (ORDER BY s.dist)::int AS r
+        FROM (
+            SELECT b.id, b.embedding <=> query_embedding AS dist
+            FROM base b
+            ORDER BY b.embedding <=> query_embedding
+            LIMIT match_count
+        ) s
+    ),
+    q AS (SELECT daiah_normalize_ar(query_text) AS t),
+    txt AS (
+        SELECT x.*, row_number() OVER (ORDER BY x.ts DESC, x.id)::int AS r
+        FROM (
+            SELECT b.id, word_similarity(q.t, b.search_text) AS ts
+            FROM base b, q
+            WHERE length(q.t) > 0
+            ORDER BY word_similarity(q.t, b.search_text) DESC
+            LIMIT match_count
+        ) x
+        WHERE x.ts >= text_min
+    )
+    SELECT b.post_id,
+           b.chunk_text,
+           1 - (b.embedding <=> query_embedding) AS similarity,
+           t.ts AS text_score,
+           s.r AS sem_rank,
+           t.r AS text_rank
+    FROM base b
+    LEFT JOIN sem s ON s.id = b.id
+    LEFT JOIN txt t ON t.id = b.id
+    WHERE s.id IS NOT NULL OR t.id IS NOT NULL;
+$$;
+
+REVOKE EXECUTE ON FUNCTION match_post_chunks_hybrid(vector, text, int, text, double precision)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION match_post_chunks_hybrid(vector, text, int, text, double precision) TO service_role;
+
 -- تحديث ذاكرة واجهة Supabase (PostgREST) لترى التغييرات فوراً
 NOTIFY pgrst, 'reload schema';

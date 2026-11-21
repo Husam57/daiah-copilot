@@ -31,9 +31,15 @@ from testkit import (
 
 def _modes() -> list[str]:
     """أوضاع البحث التي يدعمها الكود الحالي (قبل البحث الهجين: semantic فقط)."""
-    if "mode" in inspect.signature(search).parameters:
-        return list(getattr(search_mod, "SEARCH_MODES", ("semantic",)))
-    return ["semantic"]
+    if "mode" not in inspect.signature(search).parameters:
+        return ["semantic"]
+    probe = search_mod._hybrid_rows(
+        search_mod._vector_literal([1.0] + [0.0] * 767), "اختبار", "ar", 1)
+    if probe is None:
+        print("   ⚠️ match_post_chunks_hybrid غير موجودة بعد (نفّذ db/schema.sql): "
+              "الهجين يُقاس بمحاكاة بايثون (hybrid_sim) لنفس المنطق")
+        return ["semantic", "hybrid_sim"]
+    return ["semantic", "hybrid", "hybrid_sim"]
 
 
 def _run(q: str, lang: str, mode: str) -> list[dict]:

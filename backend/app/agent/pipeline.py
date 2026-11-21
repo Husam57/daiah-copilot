@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from ..db import get_supabase
 from ..models import AISettings
 from ..rag.embeddings import EmbeddingError, embed_query
-from ..rag.search import search
+from ..rag.search import pick_match, search
 from .classifier import classify
 from .guidance import make_guidance
 
@@ -75,10 +75,10 @@ def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
     classification = f_class.result()
     reply_lang = classification["lang"]  # لغة جملة التوجيه/رسالة البدائل = لغة السؤال
 
-    top = results[0] if results else None
-    post = None
-    if top and top["similarity"] >= cfg.similarity_threshold:
-        post = _load_post(top["post_id"])  # تحقق إضافي أنه ما زال منشوراً
+    # المادة المختارة: أول نتيجة بترتيب الدمج (RRF) تشابهها الدلالي ≥ العتبة
+    chosen = pick_match(results, cfg.similarity_threshold)
+    top = chosen or (results[0] if results else None)
+    post = _load_post(chosen["post_id"]) if chosen else None  # تحقق إضافي أنه ما زال منشوراً
 
     if post:
         payload = build_post_payload(post, lang)
@@ -87,7 +87,7 @@ def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
             "type": "match",
             "guidance": guidance["text"],
             "post": payload,
-            "related": [_brief(r) for r in results[1:4]],
+            "related": [_brief(r) for r in results if r["post_id"] != top["post_id"]][:3],
             "sources": [_brief(r) for r in results],
             "threshold": cfg.similarity_threshold,
         }
@@ -111,9 +111,11 @@ def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
         "decision": response["type"],
         "results": [
             {**_brief(r), "above_threshold": r["similarity"] >= cfg.similarity_threshold,
-             "chunk_lang": r["chunk_lang"], "best_chunk": r["best_chunk"]}
+             "chunk_lang": r["chunk_lang"], "best_chunk": r["best_chunk"],
+             "text_score": r.get("text_score"), "sem_rank": r.get("sem_rank"), "text_rank": r.get("text_rank")}
             for r in results
         ],
+        "search_mode": results[0].get("mode") if results else None,
         "guidance_source": guidance["source"] if guidance else None,
         "guidance_model": guidance["model"] if guidance else None,
         "settings_version": cfg.version,
