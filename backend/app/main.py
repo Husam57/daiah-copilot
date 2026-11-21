@@ -40,8 +40,10 @@ async def invalidate_caches(request: Request, call_next):
     """أي تعديل ناجح في اللوحة (POST/PUT/DELETE على /api/admin/…) يُبطل كاش المسارات العامة
     وكاش الإعدادات، فيظهر النشر والتعديل في الموقع والمساعد فوراً."""
     response = await call_next(request)
-    if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api/admin/")
-            and response.status_code < 400 and request.url.path != "/api/admin/ai/test"):
+    path = request.url.path
+    if (request.method not in ("GET", "HEAD", "OPTIONS")
+            and (path.startswith("/api/admin/") or path == "/api/auth/me")  # اسم المراجع يظهر في الموقع
+            and response.status_code < 400 and path != "/api/admin/ai/test"):
         invalidate_public()
         settings_cache.clear()
     return response

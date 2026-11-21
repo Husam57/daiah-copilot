@@ -7,6 +7,7 @@ import { Dialog as D } from "radix-ui";
 import * as React from "react";
 import { ApprovedTextCard, AssistantAvatar, FallbackCard } from "@/components/ui/answer";
 import { Skeleton } from "@/components/ui/feedback";
+import { CopyLinkButton } from "./copy-link";
 import { useI18n } from "@/lib/i18n/client";
 import { fmtNumber, type Dict } from "@/lib/i18n/dictionaries";
 import { postHref } from "@/lib/site";
@@ -296,6 +297,14 @@ export function AssistantChat() {
                         langFallback={turn.response.post.lang_fallback}
                         readMoreHref={`${postHref(turn.response.post.slug)}${turn.response.post.lang === "en" ? "?lang=en" : ""}`}
                         labels={labels}
+                        actions={
+                          <CopyLinkButton
+                            variant="share"
+                            path={`${postHref(turn.response.post.slug)}${turn.response.post.lang === "en" ? "?lang=en" : ""}`}
+                            title={turn.response.post.title}
+                            className="border-approved-border"
+                          />
+                        }
                       />
                       {turn.response.related.length > 0 && (
                         <div className="flex flex-wrap items-center gap-2">

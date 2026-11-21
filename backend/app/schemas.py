@@ -211,6 +211,7 @@ class PublicPost(_Model):
     reading_minutes: int = 0
     reading_minutes_en: int | None = None
     section: SectionRef
+    reviewed_by_name: str | None = None  # اسم من راجع المادة ونشرها (الاسم فقط، بلا بريد)
 
 
 __all__ = [

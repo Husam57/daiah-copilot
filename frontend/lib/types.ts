@@ -308,6 +308,7 @@ export interface PublicPostPage {
 }
 
 export interface PublicPost {
+  reviewed_by_name?: string | null;
   id: number;
   slug: string;
   section_id: number;

@@ -29,7 +29,8 @@ router = APIRouter(prefix="/api", tags=["public"])
 
 _SECTION_COLUMNS = ",".join(f for f in PublicSection.model_fields if f != "posts_count")
 _POST_COLUMNS = ",".join(
-    f for f in PublicPost.model_fields if f not in ("section", "reading_minutes", "reading_minutes_en")
+    f for f in PublicPost.model_fields
+    if f not in ("section", "reading_minutes", "reading_minutes_en", "reviewed_by_name")
 )
 # أعمدة البطاقة (+ المحتوى لحساب وقت القراءة والمقتطف، ولا يُرسل كاملاً)
 _CARD_COLUMNS = (
@@ -262,7 +263,7 @@ def latest_posts(limit: int = Query(6, ge=1, le=24), category: Category | None =
 def _load_published(slug: str) -> dict:
     rows = (
         get_supabase().table("posts")
-        .select(f"{_POST_COLUMNS},section:sections!inner(name_ar,name_en,slug,category,is_active)")
+        .select(f"{_POST_COLUMNS},reviewed_by,section:sections!inner(name_ar,name_en,slug,category,is_active)")
         .eq("slug", slug).eq("status", "published").eq("section.is_active", True)
         .limit(1).execute().data
     )
@@ -275,8 +276,13 @@ def _load_published(slug: str) -> dict:
 @cached_public
 def get_post(slug: str) -> PublicPost:
     row = _load_published(slug)
+    reviewer = None
+    if row.get("reviewed_by"):
+        users = get_supabase().table("users").select("name").eq("id", row["reviewed_by"]).limit(1).execute().data
+        reviewer = (users[0]["name"] or "").strip() or None if users else None
     return PublicPost(
         **row,
+        reviewed_by_name=reviewer,
         reading_minutes=reading_minutes(row["content_ar"]),
         reading_minutes_en=reading_minutes(row.get("content_en")) if row.get("content_en") else None,
     )

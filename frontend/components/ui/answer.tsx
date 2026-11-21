@@ -56,6 +56,7 @@ export function ApprovedTextCard({
   langFallback,
   labels = AR_LABELS,
   headingLevel = "h2",
+  actions,
   className,
 }: {
   title: string;
@@ -69,6 +70,8 @@ export function ApprovedTextCard({
   langFallback?: boolean;
   labels?: AnswerLabels;
   headingLevel?: "h2" | "h3";
+  /** أزرار إضافية في التذييل بجانب «اقرأ المادة كاملة» (مثل «شارك المادة») */
+  actions?: React.ReactNode;
   className?: string;
 }) {
   const dir = lang === "en" ? "ltr" : "rtl";
@@ -105,7 +108,10 @@ export function ApprovedTextCard({
             </>
           )}
         </span>
-        {readMoreHref && (
+        {(readMoreHref || actions) && (
+          <span className="flex flex-wrap items-center gap-2">
+            {actions}
+            {readMoreHref && (
           <a
             href={readMoreHref}
             {...(isInternal(readMoreHref) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
@@ -113,6 +119,8 @@ export function ApprovedTextCard({
           >
             {labels.readFull}
           </a>
+            )}
+          </span>
         )}
       </footer>
     </article>

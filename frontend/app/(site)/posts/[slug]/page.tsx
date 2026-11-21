@@ -1,4 +1,4 @@
-import { BadgeCheck, Download, ExternalLink } from "lucide-react";
+import { BadgeCheck, Download, ExternalLink, UserCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
@@ -153,6 +153,13 @@ export default async function PostPage({ params, searchParams }: PageProps<"/pos
                 <BadgeCheck className="size-3.5" aria-hidden />
                 {t.common.verifiedContent}
               </span>
+              {post.reviewed_by_name && (
+                <span className="inline-flex items-center gap-1.5 rounded-sm bg-primary-100 px-2.5 py-1 font-bold text-primary-700">
+                  <UserCheck className="size-3.5" aria-hidden />
+                  {t.post.reviewedBy(post.reviewed_by_name)}
+                </span>
+              )}
+              <CopyLinkButton variant="share" path={postHref(post.slug)} title={title} className="h-9 px-3" />
               {enAvailable && (
                 <span className="ms-auto inline-flex gap-1 rounded-[10px] bg-surface-muted p-1" role="group" aria-label={t.post.contentLang}>
                   {(["ar", "en"] as const).map((l) => (

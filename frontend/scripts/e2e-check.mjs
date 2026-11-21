@@ -233,6 +233,7 @@ async function scenario() {
     await checkPage(`/library?q=${encodeURIComponent(TAG)}`, { contains: POST.title_ar });
     r = await call("GET", `/api/posts/${slug}`);
     step("صفحة المادة (API): النص حرفياً", r.status === 200 && r.data?.content_ar === POST.content_ar && r.data?.content_en === POST.content_en, info(r));
+    step("صفحة المادة: اسم المراجع (reviewed_by_name)", typeof r.data?.reviewed_by_name === "string" && r.data.reviewed_by_name.length > 0, String(r.data?.reviewed_by_name));
     await checkPage(`/posts/${slug}`, { contains: POST.title_ar });
     await checkPage(`/posts/${slug}`, { lang: "en", contains: POST.title_en });
     r = await call("GET", `/api/posts/${slug}/related`);
