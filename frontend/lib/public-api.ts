@@ -43,3 +43,10 @@ export async function tryGet<T>(path: string, query?: Query): Promise<T | null> 
     return null;
   }
 }
+
+/** الأسئلة المقترحة من إعدادات اللوحة (GET /api/public/suggested-questions). أي خطأ = لا شيء يُعرض. */
+export async function getSuggestedQuestions(): Promise<string[]> {
+  const res = await tryGet<{ questions?: unknown }>("/api/public/suggested-questions");
+  const qs = Array.isArray(res?.questions) ? res.questions : [];
+  return qs.filter((q): q is string => typeof q === "string" && q.trim() !== "");
+}

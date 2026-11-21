@@ -136,6 +136,8 @@ export interface AISettings {
   top_k: number;
   fallback_message_ar: string;
   fallback_message_en: string;
+  /** أسئلة مقترحة للزائر في الرئيسية والمساعد (≤ 6، كل سؤال ≤ 120 حرفاً) */
+  suggested_questions: string[];
   version: number;
   is_active: boolean;
   updated_by: number | null;

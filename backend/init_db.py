@@ -94,7 +94,7 @@ def seed_ai_settings(sb) -> None:
         version=1,
         is_active=True,
     )
-    sb.table("ai_settings").insert(row.model_dump(exclude_none=True)).execute()
+    sb.table("ai_settings").insert(row.model_dump(exclude_none=True, exclude={"suggested_questions"})).execute()  # تبقى الافتراضية الفارغة
     print("✅ ai_settings: أُنشئ صف الإعدادات الفعّال (threshold=0.75, top_k=5)")
 
 

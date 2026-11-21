@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS ai_settings (
     top_k                INTEGER NOT NULL DEFAULT 5,
     fallback_message_ar  TEXT NOT NULL,
     fallback_message_en  TEXT NOT NULL,
+    suggested_questions  TEXT[] NOT NULL DEFAULT '{}',  -- أسئلة مقترحة للزائر (≤ 6، كل سؤال ≤ 120 حرفاً)
     version              INTEGER NOT NULL DEFAULT 1,
     is_active            BOOLEAN NOT NULL DEFAULT FALSE,
     updated_by           BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -99,6 +100,8 @@ CREATE TABLE IF NOT EXISTS ai_settings (
 );
 
 ALTER TABLE ai_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+-- الأسئلة المقترحة في الرئيسية وصفحة المساعد (تُعدّل من اللوحة؛ فارغة افتراضياً بلا أي محتوى)
+ALTER TABLE ai_settings ADD COLUMN IF NOT EXISTS suggested_questions TEXT[] NOT NULL DEFAULT '{}';
 
 -- سجل إصدارات الإعدادات: نسخة من الصف كما كان قبل كل تعديل أو استرجاع
 CREATE TABLE IF NOT EXISTS ai_settings_history (

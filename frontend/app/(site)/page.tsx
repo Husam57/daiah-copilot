@@ -9,7 +9,7 @@ import { SiteError } from "@/components/site/states";
 import { EmptyState } from "@/components/ui/feedback";
 import { fmtNumber } from "@/lib/i18n/dictionaries";
 import { getI18n } from "@/lib/i18n/server";
-import { tryGet } from "@/lib/public-api";
+import { getSuggestedQuestions, tryGet } from "@/lib/public-api";
 import { pick } from "@/lib/site";
 import type { Category, PublicPostCard, PublicSection } from "@/lib/types";
 
@@ -34,9 +34,10 @@ function trackHref(s: PublicSection): string {
 
 export default async function HomePage() {
   const { t, locale } = await getI18n();
-  const [sections, latest] = await Promise.all([
+  const [sections, latest, suggested] = await Promise.all([
     tryGet<PublicSection[]>("/api/sections"),
     tryGet<PublicPostCard[]>("/api/posts/latest", { limit: 6 }),
+    getSuggestedQuestions(),
   ]);
   const tracks = (sections ?? []).filter((s) => s.parent_id === null);
 
@@ -53,7 +54,7 @@ export default async function HomePage() {
             </span>
             <h1 className="text-[40px] font-extrabold leading-[52px] text-primary-700 md:text-[56px] md:leading-[68px]">{t.home.title}</h1>
             <p className="max-w-[520px] text-lg leading-8 text-text-secondary md:text-[22px] md:leading-9">{t.home.subtitle}</p>
-            <HeroAsk />
+            <HeroAsk suggestions={suggested} />
             <div className="flex flex-wrap items-center gap-5">
               <Link
                 href="/library"

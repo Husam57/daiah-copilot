@@ -26,7 +26,8 @@ sections(id, parent_id, name_ar, name_en, slug, category, description, sort_orde
 posts(id, section_id, slug, title_ar, title_en, content_ar, content_en, summary_ar, tags[], external_ref, topic, source_name, content_type[article|booklet|leaflet|shubha_response], file_url, status[draft|review|published], created_by, reviewed_by, published_at, updated_at, indexed_at, review_note*)
   (*review_note اختياري: ALTER في schema.sql؛ الـ Backend يعمل بدونه ويرجع note_saved=false)
 post_chunks(id, post_id, lang, chunk_index, chunk_text, embedding vector)
-ai_settings(id, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, version, is_active, updated_by, updated_at)
+ai_settings(id, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, suggested_questions TEXT[], version, is_active, updated_by, updated_at)
+  (suggested_questions: ≤ 6 أسئلة، كل سؤال ≤ 120 حرفاً، فارغة افتراضياً — لا أسئلة افتراضية في الكود أو القاعدة؛ لا تُنسخ إلى السجل ولا يمسها الاسترجاع)
 ai_settings_history(id, version, guidance_prompt, similarity_threshold, top_k, fallback_message_ar, fallback_message_en, updated_by, saved_at) — نسخة من الصف قبل كل PUT/استرجاع
 referral_centers(id, name, country, url, contact)
 chat_logs(id, session_id, question, detected_category, lang, matched_post_id, score, is_fallback, feedback, ignored, created_at)
@@ -38,7 +39,7 @@ Auth: POST /api/auth/login, GET|PUT /api/auth/me {name, email}, PUT /api/auth/me
 Admin (JWT): /api/admin/sections, /api/admin/posts (?status=&section_id=&content_type=&lang=en|ar_only&q=&page=), POST /api/admin/posts/{id}/publish,
   POST /api/admin/posts/import {format: json|csv, content, status: draft|review, dry_run} (قالب: docs/content-template.*؛ لا نشر تلقائي؛ يُستورد الصالح فقط)،
   POST /api/admin/posts/{id}/reindex, POST /api/admin/posts/{id}/return-to-draft {note?},
-  GET|PUT /api/admin/ai/settings, GET /api/admin/ai/settings/history, POST /api/admin/ai/settings/restore/{history_id}, POST /api/admin/ai/reindex, GET /api/admin/ai/index-status, POST /api/admin/ai/test,
+  GET|PUT /api/admin/ai/settings (+suggested_questions), GET /api/admin/ai/settings/history, POST /api/admin/ai/settings/restore/{history_id}, POST /api/admin/ai/reindex, GET /api/admin/ai/index-status, POST /api/admin/ai/test,
   GET /api/admin/ai/logs?fallback=&page=, GET /api/admin/ai/unanswered?period=7d|30d|all, POST /api/admin/ai/unanswered/ignore {question},
   CRUD /api/admin/referral-centers,
   GET /api/admin/dashboard/stats, GET /api/admin/dashboard/activity, GET /api/admin/dashboard/system-status?refresh=,
@@ -46,6 +47,7 @@ Admin (JWT): /api/admin/sections, /api/admin/posts (?status=&section_id=&content
 Public (بدون JWT، المنشور فقط وفي أقسام مفعّلة):
   GET /api/sections?category= (+posts_count يشمل الفرعية) · /api/categories · /api/topics?category=&section=
   GET /api/posts?q=&section=&category=&topic=&content_type=&lang=en&tag=&page=&page_size= (بطاقات: excerpt + reading_minutes + has_en + section)
+  GET /api/public/suggested-questions -> {questions} (كاش 60 ث، يُبطل عند الحفظ)
   GET /api/posts/latest?limit= · /api/posts/{slug} (+reading_minutes, reviewed_by_name) · /api/posts/{slug}/related · /api/sections/{slug}/posts · /api/referral-centers
   وقت القراءة = كلمات النص / 200 (دقيقة على الأقل). excerpt = الملخص أو أول سطور النص المنشور نفسه.
 Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ..., sources, threshold, log_id}, POST /api/chat/feedback {log_id, helpful}
@@ -88,13 +90,15 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - اللغة: كوكي daiah.lang (ar افتراضياً | en). proxy.ts يمرر x-daiah-path، و app/layout.tsx يضبط lang/dir على <html> (اللوحة و /design-system عربية دائماً).
   نصوص الواجهة في lib/i18n/dictionaries.ts فقط (بلا أي محتوى شرعي). المحتوى الإنجليزي إن وُجد وإلا العربي مع تنبيه.
 - الأقسام والمسارات والتصنيفات وخطوات المسلم الجديد تُقرأ من القاعدة؛ عند غيابها EmptyState.
+- الأسئلة المقترحة في الرئيسية والمساعد من /api/public/suggested-questions (getSuggestedQuestions في lib/public-api.ts)؛ القائمة الفارغة لا تعرض شيئاً.
+  تُدار من اللوحة ← الإعدادات والتعليمات، و«اختبر في المختبر» يفتح /admin/ai/lab?q=&lang= بالسؤال جاهزاً.
 - المساعد: session_id في localStorage (daiah.chat.session)، لغة المادة (daiah.chat.lang)، المحادثة في sessionStorage. /assistant?q= يرسل تلقائياً.
   النص المعروض = post.content حرفياً عبر SafeHtml (DOMPurify). لوحة المصادر بدرجات التشابه وخط العتبة (Bottom Sheet على الجوال). 429/503/شبكة = رسائل واضحة.
 - components/ui/answer.tsx مشتركة بين المختبر والموقع، وتقبل labels للإنجليزية.
 
 ## الاختبارات (من مجلد backend، على Supabase و Gemini الحقيقيين، وتحذف بياناتها)
 import_test.py (الاستيراد) · bench_test.py (زمن /api/chat والمسارات العامة، --json) · rag_test.py --eval-only --json PATH (تقييم الدقة: semantic و hybrid أو محاكاته hybrid_sim) ·
-e2e_run.py (يشغّل frontend/scripts/e2e-check.mjs: صفحات اللوحة والموقع بالعربية والإنجليزية + 404 + سيناريو كامل حتى /api/chat؛ يتطلب السيرفرين يعملان، ويحذف سجلات المحادثة التي ينشئها) · public_test.py (المسارات العامة + التجاهل والفترة) · smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
+e2e_run.py (يشغّل frontend/scripts/e2e-check.mjs: صفحات اللوحة والموقع بالعربية والإنجليزية + 404 + سيناريو كامل حتى /api/chat؛ يتطلب السيرفرين يعملان، ويحذف سجلات المحادثة التي ينشئها) · public_test.py (المسارات العامة + التجاهل والفترة) · suggested_test.py (الأسئلة المقترحة: التحقق + المسار العام + الكاش) · smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
 
 ## النشر (الخطوة 8) — الدليل الكامل: docs/deploy.md
 - render.yaml في الجذر (rootDir backend، PYTHON_VERSION 3.13، /api/health، free). على Render: SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, JWT_SECRET, CORS_ORIGINS فقط (ADMIN_* للتشغيل المحلي).

@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from ..agent.pipeline import run_agent
 from ..ai_config import get_active_settings
 from ..config import CHAT_MODELS, EMBEDDING_DIM, EMBEDDING_MODEL
 from ..db import get_supabase
-from ..models import AISettings, Lang, _Model
+from ..models import AISettings, Lang, _Model, clean_suggested_questions
 from ..rag.indexer import reindex_all
 from ..schemas import User
 from ..security import require_admin_user
@@ -94,6 +94,13 @@ class AISettingsUpdate(_Model):
     top_k: int | None = Field(default=None, ge=1, le=10)
     fallback_message_ar: str | None = Field(default=None, min_length=1, max_length=2000)
     fallback_message_en: str | None = Field(default=None, min_length=1, max_length=2000)
+    # ≤ 6 أسئلة، كل سؤال ≤ 120 حرفاً ([] يفرغ القائمة). لا تُنسخ إلى السجل ولا يمسها الاسترجاع.
+    suggested_questions: list[str] | None = None
+
+    @field_validator("suggested_questions")
+    @classmethod
+    def _questions(cls, v: list[str] | None) -> list[str] | None:
+        return None if v is None else clean_suggested_questions(v)
 
 
 def _user_names(ids: set[int]) -> dict[int, dict]:

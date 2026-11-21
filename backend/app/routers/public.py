@@ -9,6 +9,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ..ai_config import get_active_settings
 from ..cache import cached_public
 from ..db import get_supabase
 from ..models import Category, ContentType
@@ -322,3 +323,10 @@ def related_posts(slug: str, limit: int = Query(3, ge=1, le=12)) -> list[PublicP
 def referral_centers() -> list[PublicReferralCenter]:
     rows = get_supabase().table("referral_centers").select("id, name, country, url, contact").order("id").execute().data
     return [PublicReferralCenter(**r) for r in rows]
+
+
+# ============ الأسئلة المقترحة ============
+@router.get("/public/suggested-questions", summary="الأسئلة المقترحة للزائر (من إعدادات اللوحة؛ قد تكون فارغة)")
+@cached_public
+def suggested_questions() -> dict:
+    return {"questions": get_active_settings().suggested_questions}

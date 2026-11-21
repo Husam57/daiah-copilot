@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from .config import EMBEDDING_DIM
 
@@ -108,15 +108,42 @@ class ChunkMatch(_Model):
 
 
 # ---------- ai_settings ----------
+SUGGESTED_MAX = 6          # أقصى عدد للأسئلة المقترحة
+SUGGESTED_MAX_CHARS = 120  # أقصى طول للسؤال الواحد
+
+
+def clean_suggested_questions(v: list[str] | None) -> list[str]:
+    """تنظيف وتحقق: حذف المسافات والفارغ والمكرر، ثم حد العدد والطول (رسائل عربية)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for q in v or []:
+        q = " ".join(str(q).split())
+        if not q or q.casefold() in seen:
+            continue
+        if len(q) > SUGGESTED_MAX_CHARS:
+            raise ValueError(f"كل سؤال مقترح يجب ألا يزيد عن {SUGGESTED_MAX_CHARS} حرفاً")
+        seen.add(q.casefold())
+        out.append(q)
+    if len(out) > SUGGESTED_MAX:
+        raise ValueError(f"الحد الأقصى {SUGGESTED_MAX} أسئلة مقترحة")
+    return out
+
+
 class AISettingsCreate(_Model):
     guidance_prompt: str = ""
     similarity_threshold: float = Field(default=0.75, ge=0, le=1)
     top_k: int = Field(default=5, gt=0)
     fallback_message_ar: str = Field(min_length=1)
     fallback_message_en: str = Field(min_length=1)
+    suggested_questions: list[str] = Field(default_factory=list)
     version: int = 1
     is_active: bool = False
     updated_by: int | None = None
+
+    @field_validator("suggested_questions", mode="before")
+    @classmethod
+    def _null_to_list(cls, v):  # العمود قد يكون NULL إن أُضيف بلا قيمة افتراضية
+        return [str(q) for q in v if q and str(q).strip()] if v else []
 
 
 class AISettings(AISettingsCreate):

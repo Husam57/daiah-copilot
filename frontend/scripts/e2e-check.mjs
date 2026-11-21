@@ -275,6 +275,24 @@ async function scenario() {
       r.status === 200 && r.data?.type === "fallback" && Array.isArray(r.data?.referrals) && typeof r.data?.threshold === "number" && !r.data?.post,
       r.status === 200 ? `type=${r.data?.type}` : info(r),
     );
+
+    // 9) الأسئلة المقترحة: من اللوحة ← المسار العام ← الرئيسية والمساعد (ثم القائمة الأصلية)
+    const orig = (await call("GET", "/api/admin/ai/settings")).data?.suggested_questions ?? [];
+    try {
+      r = await call("PUT", "/api/admin/ai/settings", { suggested_questions: [QUESTION] });
+      step("اللوحة: حفظ سؤال مقترح", r.status === 200 && r.data?.suggested_questions?.[0] === QUESTION, info(r));
+      r = await call("GET", "/api/public/suggested-questions");
+      step("المسار العام: يرجع السؤال فوراً", r.status === 200 && r.data?.questions?.[0] === QUESTION, info(r));
+      await checkPage("/", { contains: QUESTION });
+      await checkPage("/assistant", { contains: QUESTION });
+      await checkPage(`/admin/ai/lab?q=${encodeURIComponent(QUESTION)}`);
+      r = await call("PUT", "/api/admin/ai/settings", { suggested_questions: [] });
+      const home = (await fetchPage("/")).html;
+      step("قائمة فارغة: لا يظهر أي سؤال مقترح في الرئيسية", r.status === 200 && !home.includes(QUESTION));
+    } finally {
+      r = await call("PUT", "/api/admin/ai/settings", { suggested_questions: orig });
+      step("استعادة الأسئلة المقترحة الأصلية", r.status === 200, info(r));
+    }
   } finally {
     // 8) الحذف
     if (created.post) {

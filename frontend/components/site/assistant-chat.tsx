@@ -61,7 +61,7 @@ function errorText(e: unknown, t: Dict): string {
 const pct = (v: number) => `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
 
 /** المساعد (Assistant.dc.html): المحادثة + لوحة «المصادر المسترجعة» (Bottom Sheet على الجوال). */
-export function AssistantChat() {
+export function AssistantChat({ suggestions }: { suggestions: string[] }) {
   const { t, locale } = useI18n();
   const labels = React.useMemo(() => ({ ...t.assistant, read: t.common.read }), [t]);
   const router = useRouter();
@@ -212,21 +212,24 @@ export function AssistantChat() {
               <AssistantAvatar />
               <div className="flex min-w-0 flex-col gap-3">
                 <p className="rounded-lg border border-border bg-surface px-4 py-3 text-base leading-7">{t.assistant.welcome}</p>
-                <div className="flex flex-col gap-2">
-                  <span className="text-[13px] text-text-muted">{t.assistant.examples}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {t.home.suggestions.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => void ask(s, lang)}
-                        className="min-h-10 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-text-secondary hover:border-approved-border hover:text-primary-700"
-                      >
-                        {s}
-                      </button>
-                    ))}
+                {suggestions.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[13px] text-text-muted">{t.assistant.examples}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          dir="auto"
+                          onClick={() => void ask(s, lang)}
+                          className="min-h-10 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-text-secondary hover:border-approved-border hover:text-primary-700"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

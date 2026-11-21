@@ -109,11 +109,6 @@ const ar = {
     askLabel: "اسأل عن موقف تواجهه أو شبهة سمعتها",
     askPlaceholder: "اكتب سؤالك أو الموقف الذي تواجهه...",
     ask: "اسأل",
-    suggestions: [
-      "كيف أبدأ الحوار مع غير المسلم؟",
-      "ما المادة المناسبة لمن يسأل عن الإسلام؟",
-      "كيف أتعامل مع شبهة معينة؟",
-    ],
     exploreLibrary: "استكشف المكتبة",
     illoQuestion: "سؤال يطرحه الداعية…",
     illoGuidance: "جملة توجيه قصيرة من المساعد، ثم المادة المعتمدة:",
@@ -375,11 +370,6 @@ const en: Dict = {
     askLabel: "Ask about a situation you face or a doubt you heard",
     askPlaceholder: "Type your question or the situation you face...",
     ask: "Ask",
-    suggestions: [
-      "How do I start a conversation with a non-Muslim?",
-      "What material suits someone asking about Islam?",
-      "How should I deal with a specific doubt?",
-    ],
     exploreLibrary: "Explore the library",
     illoQuestion: "A question from a caller…",
     illoGuidance: "A short guidance line from the assistant, then the approved material:",

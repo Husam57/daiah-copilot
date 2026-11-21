@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AssistantChat } from "@/components/site/assistant-chat";
 import { getI18n } from "@/lib/i18n/server";
+import { getSuggestedQuestions } from "@/lib/public-api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -12,10 +13,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function AssistantPage() {
+export default async function AssistantPage() {
+  const suggestions = await getSuggestedQuestions();
   return (
     <Suspense>
-      <AssistantChat />
+      <AssistantChat suggestions={suggestions} />
     </Suspense>
   );
 }

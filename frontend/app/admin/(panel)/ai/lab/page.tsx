@@ -3,7 +3,8 @@
 import { CheckCircle2, ChevronDown, FlaskConical, History, Info, Loader2, ScanSearch } from "lucide-react";
 import Link from "next/link";
 import { Collapsible } from "radix-ui";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { ApprovedTextCard, FallbackCard, GuidanceBubble, SourceChip } from "@/components/ui/answer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,10 +19,20 @@ import { cn } from "@/lib/utils";
 const MAX = 1000;
 const SOURCE_LABEL: Record<string, string> = { model: "النموذج", template: "قالب ثابت", heuristic: "كشف تلقائي" };
 
-/** مختبر الاختبار حسب AdminLab.dc.html: نموذج السؤال ثم 3 مراحل قابلة للطي. */
+/** مختبر الاختبار حسب AdminLab.dc.html: نموذج السؤال ثم 3 مراحل قابلة للطي.
+ * ‎?q=…&lang=en يملأ السؤال جاهزاً (من «اختبر في المختبر» في الأسئلة المقترحة) دون إرساله. */
 export default function LabPage() {
-  const [message, setMessage] = useState("");
-  const [lang, setLang] = useState<"ar" | "en">("ar");
+  return (
+    <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
+      <Lab />
+    </Suspense>
+  );
+}
+
+function Lab() {
+  const params = useSearchParams();
+  const [message, setMessage] = useState(() => (params.get("q") ?? "").slice(0, MAX));
+  const [lang, setLang] = useState<"ar" | "en">(() => (params.get("lang") === "en" ? "en" : "ar"));
   const [result, setResult] = useState<{ q: string; data: LabResult; ms: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

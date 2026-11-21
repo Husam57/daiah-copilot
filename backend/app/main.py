@@ -105,6 +105,8 @@ def _validation_message(err: dict) -> str:
         return "لا يمكن أن يكون فارغاً" if n <= 1 else f"يجب ألا يقل عن {n} أحرف"
     if t == "value_error" and "email" in str(err.get("msg", "")).lower():
         return "بريد إلكتروني غير صحيح"
+    if t == "value_error":  # رسائل المدققات المخصصة (عربية)
+        return str(err.get("msg", "")).removeprefix("Value error, ") or "قيمة غير صحيحة"
     return _VALIDATION_MESSAGES.get(t, "قيمة غير صحيحة")
 
 

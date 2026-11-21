@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical, History, Lock, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, FlaskConical, History, Lightbulb, Lock, MessageCircleQuestion, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useShell } from "@/components/admin/shell-context";
@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 const PROMPT_MAX = 4000;
 const T_MIN = 0.5;
 const T_MAX = 0.95;
+/** نفس حدود الـ Backend (app/models.py: SUGGESTED_MAX و SUGGESTED_MAX_CHARS) */
+const Q_MAX = 6;
+const Q_CHARS = 120;
 
 /** القواعد الثابتة كما هي مطبّقة في backend/app/agent (لا تتغير من اللوحة). */
 const FIXED_RULES = [
@@ -41,6 +44,7 @@ interface Form {
   top_k: number;
   fallback_message_ar: string;
   fallback_message_en: string;
+  suggested_questions: string[];
 }
 
 const toForm = (s: AISettings): Form => ({
@@ -49,7 +53,10 @@ const toForm = (s: AISettings): Form => ({
   top_k: s.top_k,
   fallback_message_ar: s.fallback_message_ar,
   fallback_message_en: s.fallback_message_en,
+  suggested_questions: s.suggested_questions ?? [],
 });
+
+const cleanQuestions = (qs: string[]) => qs.map((q) => q.replace(/\s+/g, " ").trim()).filter(Boolean);
 
 const sectionCard = "flex flex-col rounded-lg border border-border bg-surface p-[22px]";
 
@@ -106,6 +113,11 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
       setError("رسالتا عدم التوفر (بالعربية والإنجليزية) مطلوبتان");
       return;
     }
+    const questions = cleanQuestions(form.suggested_questions);
+    if (questions.some((q) => q.length > Q_CHARS)) {
+      setError(`كل سؤال مقترح يجب ألا يزيد عن ${formatNumber(Q_CHARS)} حرفاً`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -115,6 +127,7 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
           ...form,
           fallback_message_ar: form.fallback_message_ar.trim(),
           fallback_message_en: form.fallback_message_en.trim(),
+          suggested_questions: questions,
         },
       });
       toast.success(`حُفظت الإعدادات — الإصدار ${res.version}`);
@@ -298,11 +311,127 @@ function SettingsForm({ initial, onSaved }: { initial: AISettings; onSaved: (s: 
               />
             </Field>
           </section>
+
+          <SuggestedQuestions value={form.suggested_questions} onChange={(v) => set("suggested_questions", v)} />
         </div>
 
         <VersionHistory current={initial} onRestored={onSaved} />
       </div>
     </>
+  );
+}
+
+/** رابط المختبر بالسؤال جاهزاً (بلغة المادة حسب حروف السؤال). */
+function labHref(q: string): string {
+  const lang = /[\u0600-\u06FF]/.test(q) ? "ar" : "en";
+  return `/admin/ai/lab?${new URLSearchParams({ q: q.trim(), lang })}`;
+}
+
+/** الأسئلة المقترحة للزائر (الرئيسية + المساعد): إضافة وحذف وإعادة ترتيب، واختبار كل سؤال في المختبر. */
+function SuggestedQuestions({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const update = (i: number, q: string) => onChange(value.map((x, j) => (j === i ? q : x)));
+  const remove = (i: number) => onChange(value.filter((_, j) => j !== i));
+  const move = (i: number, d: -1 | 1) => {
+    const next = [...value];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    onChange(next);
+  };
+  const add = () => {
+    onChange([...value, ""]);
+    requestAnimationFrame(() => document.getElementById(`sq-${value.length}`)?.focus());
+  };
+  const full = value.length >= Q_MAX;
+
+  return (
+    <section aria-labelledby="suggested" className={cn(sectionCard, "gap-4")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="suggested" className="text-base font-bold">
+          الأسئلة المقترحة
+        </h2>
+        <span className="text-xs tabular-nums text-text-muted">
+          {formatNumber(value.length)} / {formatNumber(Q_MAX)}
+        </span>
+      </div>
+      <p className="text-sm text-text-secondary">تظهر للزائر في الرئيسية وصفحة المساعد بهذا الترتيب. إذا كانت القائمة فارغة لا يظهر شيء.</p>
+      <div className="flex items-start gap-2 rounded-md border border-approved-border bg-primary-50 px-3 py-2.5 text-[13px] leading-6 text-primary-700">
+        <Lightbulb className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>اختر أسئلة لها مواد منشورة حتى تظهر للزائر نتيجة معتمدة.</span>
+      </div>
+
+      {value.length === 0 ? (
+        <EmptyState
+          className="py-6"
+          icon={<MessageCircleQuestion />}
+          title="لا أسئلة مقترحة"
+          description="أضف سؤالاً ثم اختبره في المختبر للتأكد من أنه يطابق مادة منشورة."
+        />
+      ) : (
+        <ol className="flex flex-col gap-2.5">
+          {value.map((q, i) => {
+            const len = q.trim().length;
+            const over = len > Q_CHARS;
+            return (
+              <li key={i} className="flex flex-col gap-1.5 rounded-md border border-border-subtle bg-surface p-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">
+                    {formatNumber(i + 1)}
+                  </span>
+                  <Input
+                    id={`sq-${i}`}
+                    value={q}
+                    dir="auto"
+                    maxLength={Q_CHARS + 40}
+                    aria-label={`السؤال المقترح ${i + 1}`}
+                    aria-invalid={over || undefined}
+                    placeholder="اكتب سؤالاً كما يطرحه الزائر…"
+                    onChange={(e) => update(i, e.target.value)}
+                    className={cn("min-w-0 flex-[1_1_220px]", over && "border-danger")}
+                  />
+                  <span className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon-sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label="نقل لأعلى">
+                      <ArrowUp aria-hidden />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" onClick={() => move(i, 1)} disabled={i === value.length - 1} aria-label="نقل لأسفل">
+                      <ArrowDown aria-hidden />
+                    </Button>
+                    {len > 0 ? (
+                      <Link
+                        href={labHref(q)}
+                        target="_blank"
+                        className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        aria-label={`اختبر في المختبر: ${q.trim()}`}
+                      >
+                        <FlaskConical aria-hidden />
+                        <span className="hidden sm:inline">اختبر في المختبر</span>
+                      </Link>
+                    ) : (
+                      <Button variant="secondary" size="sm" disabled aria-label="اختبر في المختبر (اكتب السؤال أولاً)">
+                        <FlaskConical aria-hidden />
+                        <span className="hidden sm:inline">اختبر في المختبر</span>
+                      </Button>
+                    )}
+                    <Button variant="danger-ghost" size="icon-sm" onClick={() => remove(i)} aria-label={`حذف السؤال ${i + 1}`}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </span>
+                </div>
+                <span className={cn("ps-9 text-xs tabular-nums", over ? "text-danger" : "text-text-muted")}>
+                  <span dir="ltr">
+                    {formatNumber(len)} / {formatNumber(Q_CHARS)}
+                  </span>{" "}
+                  حرف{over && " — أطول من المسموح"}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      <Button variant="soft" className="self-start" onClick={add} disabled={full}>
+        <Plus aria-hidden />
+        {full ? `الحد الأقصى ${formatNumber(Q_MAX)} أسئلة` : "إضافة سؤال"}
+      </Button>
+    </section>
   );
 }
 

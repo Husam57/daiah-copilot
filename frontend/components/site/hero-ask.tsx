@@ -9,8 +9,8 @@ export function assistantHref(q: string) {
   return `/assistant?q=${encodeURIComponent(q.trim())}`;
 }
 
-/** حقل السؤال الكبير في الـ Hero + الأسئلة المقترحة (Main.dc.html). */
-export function HeroAsk() {
+/** حقل السؤال الكبير في الـ Hero + الأسئلة المقترحة من اللوحة (Main.dc.html). القائمة الفارغة لا تعرض شيئاً. */
+export function HeroAsk({ suggestions }: { suggestions: string[] }) {
   const { t } = useI18n();
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -46,18 +46,21 @@ export function HeroAsk() {
           {t.home.ask}
         </button>
       </div>
-      <div className="mt-1 flex flex-wrap gap-2">
-        {t.home.suggestions.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => go(s)}
-            className="min-h-10 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-text-secondary transition-colors hover:border-approved-border hover:text-primary-700"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      {suggestions.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-2">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              dir="auto"
+              onClick={() => go(s)}
+              className="min-h-10 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-text-secondary transition-colors hover:border-approved-border hover:text-primary-700"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </form>
   );
 }
