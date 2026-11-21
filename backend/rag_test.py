@@ -4,18 +4,108 @@
 2. أسئلة مطابقة: المادة الصحيحة أولاً.  3. أسئلة بعيدة: درجاتها أقل.
 4. تعديل محتوى منشور منشور -> إعادة فهرسة.  5. إرجاعه لمسودة -> يختفي من البحث.
 6. اقتراح عتبة تشابه من الدرجات، وحفظها في ai_settings (--no-save لعدم الحفظ).
+7. تقييم دقة البحث (مجموعة أكبر: 5 مواد متقاربة + 22 سؤالاً بصيغ مختلفة + 7 أسئلة بعيدة)
+   لكل وضع بحث متاح (semantic / hybrid): Top-1، MRR، ودقة قرار match/fallback بالعتبة الحالية.
 
 التشغيل (من مجلد backend):  .venv\\Scripts\\python.exe rag_test.py
+   --no-save    لا يحفظ العتبة المقترحة
+   --eval-only  التقييم فقط (ينشئ المواد ويقيس ثم يحذفها)
+   --json PATH  يحفظ أرقام التقييم في ملف JSON
 """
+import inspect
+import json
 import sys
+import time
 
 from app.config import CHAT_MODELS  # noqa: F401 — يتأكد من تحميل الإعدادات
 from app.db import get_supabase
+from app.ai_config import get_active_settings
+from app.rag import search as search_mod
 from app.rag.search import search
 from testkit import (
-    FAR_QUESTIONS, MATCH_QUESTIONS, cleanup, client, create_fixtures, detail, login,
-    publish_all, step, summary,
+    EVAL_FAR_QUESTIONS, EVAL_QUESTIONS, FAR_QUESTIONS, MATCH_QUESTIONS, cleanup, client,
+    create_eval_posts, create_fixtures, detail, login, publish_all, step, summary,
 )
+
+
+def _modes() -> list[str]:
+    """أوضاع البحث التي يدعمها الكود الحالي (قبل البحث الهجين: semantic فقط)."""
+    if "mode" in inspect.signature(search).parameters:
+        return list(getattr(search_mod, "SEARCH_MODES", ("semantic",)))
+    return ["semantic"]
+
+
+def _run(q: str, lang: str, mode: str) -> list[dict]:
+    if "mode" in inspect.signature(search).parameters:
+        return search(q, lang, 5, mode=mode)
+    return search(q, lang, 5)
+
+
+def _decision(results: list[dict], threshold: float) -> dict | None:
+    """المادة التي سيعرضها المساعد (نفس منطق pipeline)، أو None = fallback."""
+    pick = getattr(search_mod, "pick_match", None)
+    if pick:
+        return pick(results, threshold)
+    top = results[0] if results else None
+    return top if top and top["similarity"] >= threshold else None
+
+
+def evaluate(ids: dict, threshold: float) -> dict:
+    """يقيس كل وضع بحث على EVAL_QUESTIONS و EVAL_FAR_QUESTIONS (المواد التجريبية فقط)."""
+    key_of = {v: k for k, v in ids.items()}
+    report: dict = {"threshold": threshold, "questions": len(EVAL_QUESTIONS),
+                    "far_questions": len(EVAL_FAR_QUESTIONS), "modes": {}}
+    for mode in _modes():
+        print(f"\n— التقييم: {mode} (العتبة {threshold}) —")
+        top1 = rr = ok_dec = 0
+        sims: list[float] = []
+        by_kind: dict[str, list[int]] = {}
+        misses: list[str] = []
+        t0 = time.perf_counter()
+        for key, q, lang, kind in EVAL_QUESTIONS:
+            res = [r for r in _run(q, lang, mode) if r["post_id"] in key_of]
+            rank = next((i + 1 for i, r in enumerate(res) if r["post_id"] == ids[key]), None)
+            hit = rank == 1
+            top1 += hit
+            rr += 1 / rank if rank else 0
+            correct = next((r for r in res if r["post_id"] == ids[key]), None)
+            if correct:
+                sims.append(correct["similarity"])
+            dec = _decision(res, threshold)
+            good = dec is not None and dec["post_id"] == ids[key]
+            ok_dec += good
+            by_kind.setdefault(kind, [0, 0])
+            by_kind[kind][0] += hit
+            by_kind[kind][1] += 1
+            if not (hit and good):
+                misses.append(f"[{kind}] {q} → " + ", ".join(
+                    f"{key_of[r['post_id']]}={r['similarity']:.3f}" for r in res[:3]))
+        far_ok = 0
+        far_max = 0.0
+        for q, lang in EVAL_FAR_QUESTIONS:
+            res = [r for r in _run(q, lang, mode) if r["post_id"] in key_of]
+            far_max = max(far_max, res[0]["similarity"] if res else 0.0)
+            far_ok += _decision(res, threshold) is None
+        n, nf = len(EVAL_QUESTIONS), len(EVAL_FAR_QUESTIONS)
+        m = {
+            "top1": round(top1 / n, 4), "mrr": round(rr / n, 4),
+            "match_decision_acc": round(ok_dec / n, 4), "far_fallback_acc": round(far_ok / nf, 4),
+            "overall_decision_acc": round((ok_dec + far_ok) / (n + nf), 4),
+            "min_correct_sim": round(min(sims), 4) if sims else None,
+            "mean_correct_sim": round(sum(sims) / len(sims), 4) if sims else None,
+            "max_far_sim": round(far_max, 4),
+            "by_kind": {k: f"{v[0]}/{v[1]}" for k, v in by_kind.items()},
+            "ms_per_query": round((time.perf_counter() - t0) * 1000 / (n + nf)),
+            "misses": misses,
+        }
+        report["modes"][mode] = m
+        for k in ("top1", "mrr", "match_decision_acc", "far_fallback_acc", "overall_decision_acc",
+                  "min_correct_sim", "mean_correct_sim", "max_far_sim", "ms_per_query"):
+            print(f"   {k}: {m[k]}")
+        print("   حسب النوع (Top-1): " + " · ".join(f"{k} {v}" for k, v in m["by_kind"].items()))
+        for line in misses:
+            print("   ✗ " + line)
+    return report
 
 
 def suggest_threshold(match_scores: list[float], far_scores: list[float]) -> float | None:
@@ -28,6 +118,28 @@ def suggest_threshold(match_scores: list[float], far_scores: list[float]) -> flo
     return round((lo + hi) / 2, 2)
 
 
+def _json_path() -> str | None:
+    if "--json" in sys.argv:
+        i = sys.argv.index("--json")
+        return sys.argv[i + 1] if i + 1 < len(sys.argv) else None
+    return None
+
+
+def run_eval_stage(headers: dict, created: dict) -> None:
+    create_eval_posts(headers, created)
+    if len(created["posts"]) < 5:
+        step("مواد التقييم جاهزة", False)
+        return
+    report = evaluate(created["posts"], get_active_settings().similarity_threshold)
+    best = max(m["overall_decision_acc"] for m in report["modes"].values())
+    step("التقييم اكتمل", True, f"أفضل دقة قرار = {best}")
+    path = _json_path()
+    if path:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print(f"   حُفظت الأرقام في {path}")
+
+
 def main() -> int:
     save = "--no-save" not in sys.argv
     headers = login()
@@ -38,6 +150,9 @@ def main() -> int:
         if len(created["posts"]) != 3:
             return summary()
         publish_all(headers, created)
+        if "--eval-only" in sys.argv:
+            run_eval_stage(headers, created)
+            return summary()
         ids = created["posts"]
         key_of = {v: k for k, v in ids.items()}
 
@@ -126,6 +241,9 @@ def main() -> int:
              str(b) if r.is_success else detail(r))
         n = get_supabase().table("post_chunks").select("id", count="exact").eq("post_id", pid).execute().count
         step("المسودة بقيت غير مفهرسة بعد إعادة البناء", n == 0)
+
+        # ---------- تقييم الدقة ----------
+        run_eval_stage(headers, created)
 
         # ---------- حفظ العتبة ----------
         if threshold is not None and save:

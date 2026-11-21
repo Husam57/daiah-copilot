@@ -342,3 +342,33 @@ export interface PublicTopic {
 
 /** رد POST /api/chat (نفس AgentResponse + العتبة + log_id، وفي البدائل المصادر أيضاً). */
 export type ChatResponse = AgentResponse & { threshold: number; log_id: number; sources?: SourceBrief[] };
+
+/* ---------- استيراد المحتوى ---------- */
+export interface ImportRow {
+  index: number;
+  source_id: string | null;
+  slug: string | null;
+  title_ar: string | null;
+  title_en: string | null;
+  category: Category | null;
+  section_id: number | null;
+  section_name: string | null;
+  content_type: string | null;
+  topic: string | null;
+  tags: string[];
+  has_en: boolean;
+  content_chars: number;
+  errors: string[];
+  warnings: string[];
+  created_id: number | null;
+}
+
+export interface ImportResult {
+  dry_run: boolean;
+  status: "draft" | "review";
+  total: number;
+  valid: number;
+  invalid: number;
+  created: number;
+  rows: ImportRow[];
+}

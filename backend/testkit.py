@@ -117,6 +117,72 @@ FAR_QUESTIONS = [
     ("What is the capital of Australia?", "en"),
 ]
 
+# ---------- مجموعة تقييم البحث (rag_test.py) ----------
+# مادتان إضافيتان قريبتان من مادتين موجودتين (منافسة حقيقية للترتيب): الخيار ≈ الطماطم، السيارة ≈ الدراجة
+EVAL_POSTS = {
+    "cucumber": {
+        "title_ar": "زراعة الخيار في البيوت المحمية",
+        "title_en": "Growing Cucumbers in Greenhouses",
+        "content_ar": (
+            "<p>يحتاج الخيار داخل البيت المحمي إلى رطوبة معتدلة وتهوية جيدة، لأن الرطوبة العالية "
+            "تسبب البياض الدقيقي على الأوراق.</p>"
+            "<p>علّق شبكة تسلق من الخيوط فوق كل خط زراعة، ووجّه الساق عليها أسبوعياً حتى ينمو "
+            "النبات رأسياً وتسهل القطفة.</p>"
+            "<p>اقطف الثمار كل يومين وهي صغيرة الحجم، فترك الثمار الكبيرة على النبات يقلل "
+            "الإنتاج.</p>"
+        ),
+        "content_en": None,
+        "summary_ar": "إرشادات زراعة الخيار تحت الغطاء البلاستيكي.",
+    },
+    "car": {
+        "title_ar": "تغيير زيت محرك السيارة",
+        "title_en": "Changing Your Car Engine Oil",
+        "content_ar": (
+            "<p>غيّر زيت المحرك كل خمسة آلاف إلى عشرة آلاف كيلومتر حسب توصية الشركة المصنّعة "
+            "ونوع الزيت المستخدم.</p>"
+            "<p>استبدل فلتر الزيت مع كل تغيير للزيت، وافحص مستوى الزيت شهرياً بعصا القياس "
+            "والمحرك بارد.</p>"
+        ),
+        "content_en": (
+            "<p>Change the engine oil every five to ten thousand kilometres, replace the oil filter "
+            "each time, and check the oil level monthly with the dipstick while the engine is cold.</p>"
+        ),
+        "summary_ar": "متى وكيف تغيّر زيت السيارة.",
+    },
+}
+
+# (المادة الصحيحة، السؤال، لغة المادة، النوع) — النوع للتقرير فقط
+EVAL_QUESTIONS = [
+    ("garden", "كم ساعة شمس تحتاج نبتة الطماطم؟", "ar", "عادي"),
+    ("garden", "كم ساعه شمس تحتاج نبته الطماطم", "ar", "ة←ه"),
+    ("garden", "كَمْ سَاعَةً مِنَ الشَّمْسِ تَحْتَاجُ الطَّمَاطِمُ؟", "ar", "تشكيل"),
+    ("garden", "متى اسقي الطماطم", "ar", "همزات"),
+    ("garden", "دعامه خشبيه للطماطم", "ar", "كلمات مفتاحية"),
+    ("cucumber", "كيف ازرع الخيار في البيت المحمي؟", "ar", "همزات"),
+    ("cucumber", "شبكة تسلق الخيار", "ar", "كلمات مفتاحية"),
+    ("cucumber", "الخيــــار والرطوبه العاليه", "ar", "تطويل"),
+    ("cucumber", "متى اقطف ثمار الخيار؟", "ar", "عادي"),
+    ("bike", "كيف أنظف سلسلة الدراجة وأزيتها؟", "ar", "عادي"),
+    ("bike", "وسائد الفرامل رقيقه متى ابدلها", "ar", "ة←ه"),
+    ("bike", "ضغط الاطارات قبل الرحله", "ar", "همزات"),
+    ("car", "متى أغير زيت محرك السيارة؟", "ar", "عادي"),
+    ("car", "فلتر الزيت", "ar", "كلمات مفتاحية"),
+    ("car", "عصا قياس مستوى الزيت", "ar", "كلمات مفتاحية"),
+    ("time", "كيف أنظم وقت المذاكرة قبل الامتحان؟", "ar", "عادي"),
+    ("time", "فترات خمس وعشرين دقيقه للمذاكره", "ar", "ة←ه"),
+    ("time", "النَّوْمُ لَيْلَةَ الِاخْتِبَارِ", "ar", "تشكيل"),
+    ("time", "How should I organize my study time before exams?", "en", "إنجليزي"),
+    ("garden", "How much sunlight do tomato plants need?", "en", "إنجليزي"),
+    ("car", "how often should I change engine oil", "en", "إنجليزي"),
+    ("bike", "bike brake pads", "en", "إنجليزي (المادة عربية فقط)"),
+]
+
+EVAL_FAR_QUESTIONS = FAR_QUESTIONS + [
+    ("ما أفضل طريقة لطهي الأرز؟", "ar"),
+    ("كيف أتعلم البرمجة بلغة بايثون؟", "ar"),
+    ("ما هي أسعار تذاكر الطيران هذا الشهر؟", "ar"),
+]
+
 CENTERS = [
     {"name": f"مركز تجريبي للاختبار {TAG}", "country": "—", "url": "https://example.com", "contact": "test@example.com"},
 ]
@@ -147,6 +213,21 @@ def create_fixtures(headers: dict, with_centers: bool = False) -> dict:
             if step("إنشاء مركز إحالة تجريبي", r.status_code == 201, detail(r) if r.status_code != 201 else ""):
                 created["centers"].append(r.json()["id"])
     return created
+
+
+def create_eval_posts(headers: dict, created: dict) -> None:
+    """مواد التقييم الإضافية (EVAL_POSTS) في نفس القسم التجريبي، منشورة ومفهرسة."""
+    for key, p in EVAL_POSTS.items():
+        r = client.post("/api/admin/posts", headers=headers, json={
+            **p, "section_id": created["section"], "slug": f"test-{key}-{TAG}",
+            "source_name": "بيانات اختبار", "external_ref": "https://example.com/test", "tags": ["اختبار"],
+        })
+        if not step(f"إنشاء منشور التقييم «{key}»", r.status_code == 201, detail(r) if r.status_code != 201 else ""):
+            continue
+        pid = r.json()["id"]
+        created["posts"][key] = pid
+        r = client.post(f"/api/admin/posts/{pid}/publish", headers=headers)
+        step(f"نشر وفهرسة «{key}»", r.status_code == 200 and r.json().get("indexed"), detail(r))
 
 
 def publish_all(headers: dict, created: dict) -> None:

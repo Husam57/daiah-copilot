@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, MoreVertical, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Eye, FileText, FileUp, MoreVertical, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -165,10 +165,16 @@ function PostsList() {
       <PageHeader
         title="المنشورات"
         actions={
-          <Link href="/admin/posts/new" className={buttonVariants({ size: "lg" })}>
-            <Plus aria-hidden />
-            منشور جديد
-          </Link>
+          <>
+            <Link href="/admin/posts/import" className={buttonVariants({ variant: "secondary", size: "lg" })}>
+              <FileUp aria-hidden />
+              استيراد
+            </Link>
+            <Link href="/admin/posts/new" className={buttonVariants({ size: "lg" })}>
+              <Plus aria-hidden />
+              منشور جديد
+            </Link>
+          </>
         }
       />
 

@@ -101,6 +101,7 @@ const STATIC_PAGES = [
   "/admin/sections",
   "/admin/posts",
   "/admin/posts/new",
+  "/admin/posts/import",
   "/admin/review",
   "/admin/ai/settings",
   "/admin/ai/knowledge",

@@ -13,7 +13,7 @@ from postgrest.exceptions import APIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import redact, settings
-from .routers import admin_ai, admin_misc, admin_posts, admin_sections, auth, chat, public
+from .routers import admin_ai, admin_import, admin_misc, admin_posts, admin_sections, auth, chat, public
 
 log = logging.getLogger("daiah")
 
@@ -33,6 +33,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(admin_sections.router)
+app.include_router(admin_import.router)
 app.include_router(admin_posts.router)
 app.include_router(admin_ai.router)
 app.include_router(admin_misc.centers)

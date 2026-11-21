@@ -1,0 +1,4 @@
+﻿id,category,section_slug,topic,title_ar,title_en,content_ar,content_en,summary_ar,tags,external_ref,source_name,content_type,file_url
+example-001,methodology,example-section,اسم الموضوع,عنوان المادة بالعربية هنا,Post title in English (optional),"اكتب هنا نص المادة المعتمد كما هو حرفياً.
+
+افصل بين الفقرات بسطر فارغ، أو الصق نص HTML من المحرر.",Paste the approved English text here (optional).,ملخص قصير للمادة في سطر أو سطرين (اختياري).,وسم أول|وسم ثان,https://example.com/original-source,اسم المصدر أو الجهة,article,

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "example-001",
+    "category": "methodology",
+    "section_slug": "example-section",
+    "topic": "اسم الموضوع",
+    "title_ar": "عنوان المادة بالعربية هنا",
+    "title_en": "Post title in English (optional)",
+    "content_ar": "اكتب هنا نص المادة المعتمد كما هو حرفياً.\n\nافصل بين الفقرات بسطر فارغ، أو الصق نص HTML من المحرر.",
+    "content_en": "Paste the approved English text here (optional).",
+    "summary_ar": "ملخص قصير للمادة في سطر أو سطرين (اختياري).",
+    "tags": [
+      "وسم أول",
+      "وسم ثان"
+    ],
+    "external_ref": "https://example.com/original-source",
+    "source_name": "اسم المصدر أو الجهة",
+    "content_type": "article",
+    "file_url": ""
+  }
+]

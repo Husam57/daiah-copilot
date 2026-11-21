@@ -122,7 +122,14 @@ export function breadcrumbFor(pathname: string): { label: string; href?: string 
       const rest = pathname.slice(it.href.length).split("/").filter(Boolean);
       const page = it.label.replace(" (RAG)", "");
       if (!rest.length) return [...trail, { label: page }];
-      const leaf = rest[0] === "new" ? "منشور جديد" : it.href === "/admin/review" ? "مراجعة منشور" : "تعديل منشور";
+      const leaf =
+        rest[0] === "new"
+          ? "منشور جديد"
+          : rest[0] === "import"
+            ? "استيراد"
+            : it.href === "/admin/review"
+              ? "مراجعة منشور"
+              : "تعديل منشور";
       return [...trail, { label: page, href: it.href }, { label: leaf }];
     }
   }
