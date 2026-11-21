@@ -18,7 +18,9 @@ export function Tooltip({
   disabled?: boolean;
 }) {
   if (disabled) return <>{children}</>;
+  // Provider داخل المكوّن: لا حاجة لمزود عام في كل الصفحات (يخفف JavaScript الموقع العام)
   return (
+    <T.Provider delayDuration={250} skipDelayDuration={100}>
     <T.Root>
       <T.Trigger asChild>{children}</T.Trigger>
       <T.Portal>
@@ -32,6 +34,7 @@ export function Tooltip({
         </T.Content>
       </T.Portal>
     </T.Root>
+    </T.Provider>
   );
 }
 

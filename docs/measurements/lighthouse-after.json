@@ -1,0 +1,119 @@
+{
+  "home/mobile": {
+    "performance": 79,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "3.5 s",
+    "tbt": "430 ms",
+    "cls": "0",
+    "failing": [
+      "performance:largest-contentful-paint(0.63)",
+      "performance:total-blocking-time(0.64)"
+    ]
+  },
+  "home/desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "0.8 s",
+    "tbt": "40 ms",
+    "cls": "0",
+    "failing": []
+  },
+  "assistant/mobile": {
+    "performance": 87,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "2.5 s",
+    "tbt": "400 ms",
+    "cls": "0",
+    "failing": [
+      "performance:largest-contentful-paint(0.89)",
+      "performance:total-blocking-time(0.67)"
+    ]
+  },
+  "assistant/desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "0.7 s",
+    "tbt": "40 ms",
+    "cls": "0",
+    "failing": []
+  },
+  "library/mobile": {
+    "performance": 90,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "2.5 s",
+    "tbt": "320 ms",
+    "cls": "0",
+    "failing": [
+      "performance:total-blocking-time(0.76)"
+    ]
+  },
+  "library/desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "0.8 s",
+    "tbt": "50 ms",
+    "cls": "0.006",
+    "failing": []
+  },
+  "post/mobile": {
+    "performance": 94,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "2.6 s",
+    "tbt": "160 ms",
+    "cls": "0",
+    "failing": [
+      "performance:largest-contentful-paint(0.88)"
+    ]
+  },
+  "post/desktop": {
+    "performance": 96,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "lcp": "0.6 s",
+    "tbt": "40 ms",
+    "cls": "0.122",
+    "failing": [
+      "performance:cumulative-layout-shift(0.84)"
+    ]
+  },
+  "login/mobile": {
+    "performance": 90,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 60,
+    "lcp": "1.7 s",
+    "tbt": "390 ms",
+    "cls": "0",
+    "failing": [
+      "performance:total-blocking-time(0.68)",
+      "seo:is-crawlable(0)"
+    ]
+  },
+  "login/desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 60,
+    "lcp": "0.5 s",
+    "tbt": "50 ms",
+    "cls": "0",
+    "failing": [
+      "seo:is-crawlable(0)"
+    ]
+  }
+}

@@ -6,7 +6,8 @@ import "./globals.css";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
-  subsets: ["arabic", "latin"],
+  // العربية فقط تُحمَّل مسبقاً؛ الحروف اللاتينية بخط Inter (خط الإنجليزية في التصميم)
+  subsets: ["arabic"],
   weight: ["400", "500", "700", "800"],
   display: "swap",
 });
@@ -15,6 +16,8 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  // لا تحميل مسبق: Tajawal يغطي اللاتينية في الصفحات العربية، وInter يُحمَّل عند الحاجة (الصفحات الإنجليزية)
+  preload: false,
 });
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");

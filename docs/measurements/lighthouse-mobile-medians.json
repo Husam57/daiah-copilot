@@ -1,0 +1,34 @@
+{
+  "home/mobile": {
+    "runs": [
+      81,
+      83,
+      79
+    ],
+    "median": 81
+  },
+  "assistant/mobile": {
+    "runs": [
+      88,
+      83,
+      87
+    ],
+    "median": 87
+  },
+  "library/mobile": {
+    "runs": [
+      79,
+      78,
+      91
+    ],
+    "median": 79
+  },
+  "post/mobile": {
+    "runs": [
+      89,
+      88,
+      87
+    ],
+    "median": 88
+  }
+}

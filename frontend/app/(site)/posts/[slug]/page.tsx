@@ -6,6 +6,7 @@ import { TypeBadge } from "@/components/site/cards";
 import { CopyLinkButton } from "@/components/site/copy-link";
 import { PostBody, ShubhaResponse } from "@/components/site/post-body";
 import { fmtDate, fmtNumber, type Locale } from "@/lib/i18n/dictionaries";
+import { htmlToBlocks } from "@/lib/html-blocks";
 import { getI18n } from "@/lib/i18n/server";
 import { publicGet, tryGet } from "@/lib/public-api";
 import { CATEGORY_HREF, hasEnglish, pick, postExcerpt, postHref, postTitle, sectionName } from "@/lib/site";
@@ -75,14 +76,20 @@ export async function generateMetadata({ params }: PageProps<"/posts/[slug]">): 
 export default async function PostPage({ params, searchParams }: PageProps<"/posts/[slug]">) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const { t, locale } = await getI18n();
-  const post = await loadPost(slug);
-  const related = (await tryGet<PublicPostCard[]>(`/api/posts/${encodeURIComponent(slug)}/related`, { limit: 3 })) ?? [];
+  // المادة والمواد ذات الصلة بالتوازي (لا ينتظر أحدهما الآخر)
+  const [post, relatedRes] = await Promise.all([
+    loadPost(slug),
+    tryGet<PublicPostCard[]>(`/api/posts/${encodeURIComponent(slug)}/related`, { limit: 3 }),
+  ]);
+  const related = relatedRes ?? [];
 
   const requested = Array.isArray(sp.lang) ? sp.lang[0] : sp.lang;
   const cl = contentLang(post, requested, locale);
   const title = cl.lang === "en" ? post.title_en || post.title_ar : post.title_ar;
   const raw = cl.lang === "en" ? post.content_en! : post.content_ar;
   const { html, toc } = withToc(raw);
+  // نفس النص ككتل نصية لـ HTML الخادم (يظهر قبل التحميل؛ يستبدله DOMPurify بعده)
+  const blocks = htmlToBlocks(html);
   const minutes = cl.lang === "en" && post.reading_minutes_en ? post.reading_minutes_en : post.reading_minutes;
   const sec = sectionName(post.section, locale)!;
   const isShubha = post.content_type === "shubha_response";
@@ -201,10 +208,11 @@ export default async function PostPage({ params, searchParams }: PageProps<"/pos
                 sectionName={sec.text}
                 sourceName={post.source_name}
                 externalRef={post.external_ref}
+                fallback={blocks}
               />
             </div>
           ) : (
-            <PostBody html={html} lang={cl.lang} />
+            <PostBody html={html} lang={cl.lang} fallback={blocks} />
           )}
 
           <div className="flex max-w-[680px] flex-col gap-4">

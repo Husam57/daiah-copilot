@@ -1,13 +1,11 @@
-"use client";
-
 import { BadgeCheck } from "lucide-react";
 import Link from "next/link";
-import { useI18n } from "@/lib/i18n/client";
+import { getI18n } from "@/lib/i18n/server";
 import { LocaleLink } from "./header";
 
-/** التذييل (Main.dc.html): الاسم ووصف، روابط، الحقوق ومبدّل اللغة. */
-export function SiteFooter() {
-  const { t, locale } = useI18n();
+/** التذييل (Main.dc.html): مكوّن خادم (لا JavaScript في المتصفح إلا زر اللغة). */
+export async function SiteFooter() {
+  const { t, locale } = await getI18n();
   return (
     <footer className="bg-primary-700 text-white">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 pb-8 pt-14 md:px-8">

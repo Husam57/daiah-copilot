@@ -472,7 +472,7 @@ function SourcesPanel({ turn, index, t, locale }: { turn?: Turn; index: number; 
           ))}
         </div>
       ) : list.length === 0 ? (
-        <p className="rounded-md bg-surface-muted p-3 text-[13px] text-text-muted">{t.assistant.sourcesEmpty}</p>
+        <p className="rounded-md bg-surface-muted p-3 text-[13px] text-text-secondary">{t.assistant.sourcesEmpty}</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {list.map((s, i) => {

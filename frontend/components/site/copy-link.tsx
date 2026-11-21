@@ -1,7 +1,6 @@
 "use client";
 
 import { Link2, Share2 } from "lucide-react";
-import { toast } from "@/components/ui/toast";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +19,12 @@ export function CopyLinkButton({
   title?: string;
 }) {
   const { t } = useI18n();
+  // sonner يُحمَّل بعد النسخ فقط (لا يدخل في JavaScript الصفحة الأولي).
+  // النسخ/المشاركة أولاً داخل حدث الضغط نفسه (Safari يرفضهما بعد await آخر).
+  const notify = (ok: boolean) =>
+    import("@/components/ui/toast").then(({ toast }) =>
+      ok ? toast.success(t.common.copied) : toast.error(t.common.copyFailed),
+    );
   const copy = async () => {
     const url = new URL(path, window.location.origin).toString();
     try {
@@ -28,9 +33,9 @@ export function CopyLinkButton({
         return;
       }
       await navigator.clipboard.writeText(url);
-      toast.success(t.common.copied);
+      void notify(true);
     } catch (e) {
-      if ((e as Error)?.name !== "AbortError") toast.error(t.common.copyFailed);
+      if ((e as Error)?.name !== "AbortError") void notify(false);
     }
   };
   if (variant === "icon") {
