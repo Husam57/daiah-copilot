@@ -1,0 +1,75 @@
+{
+  "threshold": 0.59,
+  "questions": 22,
+  "far_questions": 7,
+  "modes": {
+    "semantic": {
+      "top1": 0.9545,
+      "mrr": 0.9773,
+      "match_decision_acc": 0.9545,
+      "far_fallback_acc": 1.0,
+      "overall_decision_acc": 0.9655,
+      "min_correct_sim": 0.6151,
+      "mean_correct_sim": 0.7221,
+      "max_far_sim": 0.5477,
+      "by_kind": {
+        "عادي": "5/5",
+        "ة←ه": "2/3",
+        "تشكيل": "2/2",
+        "همزات": "3/3",
+        "كلمات مفتاحية": "4/4",
+        "تطويل": "1/1",
+        "إنجليزي": "3/3",
+        "إنجليزي (المادة عربية فقط)": "1/1"
+      },
+      "ms_per_query": 3347,
+      "misses": [
+        "[ة←ه] وسائد الفرامل رقيقه متى ابدلها → car=0.637, bike=0.628, time=0.529"
+      ]
+    },
+    "hybrid": {
+      "top1": 1.0,
+      "mrr": 1.0,
+      "match_decision_acc": 1.0,
+      "far_fallback_acc": 1.0,
+      "overall_decision_acc": 1.0,
+      "min_correct_sim": 0.6151,
+      "mean_correct_sim": 0.7221,
+      "max_far_sim": 0.5385,
+      "by_kind": {
+        "عادي": "5/5",
+        "ة←ه": "3/3",
+        "تشكيل": "2/2",
+        "همزات": "3/3",
+        "كلمات مفتاحية": "4/4",
+        "تطويل": "1/1",
+        "إنجليزي": "3/3",
+        "إنجليزي (المادة عربية فقط)": "1/1"
+      },
+      "ms_per_query": 1538,
+      "misses": []
+    },
+    "hybrid_sim": {
+      "top1": 1.0,
+      "mrr": 1.0,
+      "match_decision_acc": 1.0,
+      "far_fallback_acc": 1.0,
+      "overall_decision_acc": 1.0,
+      "min_correct_sim": 0.6151,
+      "mean_correct_sim": 0.7221,
+      "max_far_sim": 0.5385,
+      "by_kind": {
+        "عادي": "5/5",
+        "ة←ه": "3/3",
+        "تشكيل": "2/2",
+        "همزات": "3/3",
+        "كلمات مفتاحية": "4/4",
+        "تطويل": "1/1",
+        "إنجليزي": "3/3",
+        "إنجليزي (المادة عربية فقط)": "1/1"
+      },
+      "ms_per_query": 2501,
+      "misses": []
+    }
+  }
+}
