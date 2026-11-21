@@ -41,6 +41,21 @@ class Settings:
     admin_email: str
     admin_password: str
     cors_origins: tuple[str, ...]
+    is_production: bool
+
+
+# الإنتاج: Render يضبط RENDER=true تلقائياً، أو APP_ENV=production يدوياً
+IS_PRODUCTION = _env("APP_ENV").lower() == "production" or _env("RENDER").lower() == "true"
+
+
+def _cors_origins() -> tuple[str, ...]:
+    """CORS_ORIGINS: روابط الواجهة مفصولة بفواصل (بلا / في النهاية). في الإنتاج لا يُسمح إلا بها،
+    ولا تُقبل * (مع allow_credentials)؛ وفي التطوير الافتراضي http://localhost:3000."""
+    raw = _env("CORS_ORIGINS")
+    origins = tuple(dict.fromkeys(o.strip().rstrip("/") for o in raw.split(",") if o.strip() and o.strip() != "*"))
+    if origins or IS_PRODUCTION:
+        return origins
+    return ("http://localhost:3000",)
 
 
 settings = Settings(
@@ -50,10 +65,8 @@ settings = Settings(
     jwt_secret=_env("JWT_SECRET"),
     admin_email=_env("ADMIN_EMAIL"),
     admin_password=os.getenv("ADMIN_PASSWORD") or "",
-    # ليس سراً: نطاقات الواجهة المسموح لها (مفصولة بفواصل)
-    cors_origins=tuple(
-        o.strip() for o in (_env("CORS_ORIGINS") or "http://localhost:3000").split(",") if o.strip()
-    ),
+    cors_origins=_cors_origins(),  # ليس سراً
+    is_production=IS_PRODUCTION,
 )
 
 SECRET_KEYS = ("SUPABASE_SERVICE_KEY", "GEMINI_API_KEY", "JWT_SECRET", "ADMIN_PASSWORD")

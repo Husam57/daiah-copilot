@@ -211,6 +211,8 @@ const ar = {
     type: "نوع المادة",
     empty: "لا توجد مواد مطابقة",
     emptyHint: "جرّب فلتراً آخر، أو تصفح المكتبة كاملة.",
+    emptyNone: "لم تُنشر مواد تعريفية بعد",
+    emptyNoneHint: "ستظهر الكتيبات والمطويات والمقالات هنا بعد نشرها من لوحة التحكم.",
   },
   newMuslim: {
     title: "مرحباً بك في الإسلام",
@@ -273,6 +275,7 @@ const ar = {
     centers: "مراكز ودعاة معتمدون",
     visitSite: "زيارة الموقع",
     noCenters: "لم تُضف مراكز معتمدة بعد.",
+    noClosest: "لا توجد بعد مادة منشورة قريبة من سؤالك.",
     langFallbackNote: "لا تتوفر نسخة إنجليزية من هذه المادة، فعُرض النص العربي.",
   },
   notFound: {
@@ -474,6 +477,8 @@ const en: Dict = {
     type: "Material type",
     empty: "No matching materials",
     emptyHint: "Try another filter, or browse the full library.",
+    emptyNone: "No introductory materials published yet",
+    emptyNoneHint: "Booklets, leaflets and articles will appear here once published from the dashboard.",
   },
   newMuslim: {
     title: "Welcome to Islam",
@@ -537,6 +542,7 @@ const en: Dict = {
     centers: "Approved centers and callers",
     visitSite: "Visit website",
     noCenters: "No approved centers have been added yet.",
+    noClosest: "There is no published material close to your question yet.",
     langFallbackNote: "No English version of this material is available, so the Arabic text is shown.",
   },
   notFound: {

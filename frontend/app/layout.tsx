@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Tajawal } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { SITE_URL } from "@/lib/env";
 import { getI18n } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -20,7 +21,6 @@ const inter = Inter({
   preload: false,
 });
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t, locale } = await getI18n();

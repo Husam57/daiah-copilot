@@ -23,7 +23,14 @@ app = FastAPI(
     title="رفيق الداعية — API",
     description="لوحة التحكم + الموقع العام + المساعد. الردود الشرعية من المواد المعتمدة حرفياً.",
     version="0.5.0",
+    # التوثيق التفاعلي في التطوير فقط (لا نعرض خريطة الـ API في الإنتاج)
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
 )
+
+if settings.is_production and not settings.cors_origins:
+    log.warning("CORS_ORIGINS فارغ في الإنتاج: لن تستطيع الواجهة الاتصال بالـ API. أضف رابط Vercel.")
 
 app.add_middleware(
     CORSMiddleware,

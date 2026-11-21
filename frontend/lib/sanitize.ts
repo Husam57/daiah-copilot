@@ -1,4 +1,4 @@
-import DOMPurify from "dompurify";
+import DOMPurify from "isomorphic-dompurify";
 
 let configured = false;
 
@@ -16,10 +16,11 @@ function configure() {
 
 /**
  * ينظّف HTML المنشورات (من TipTap) قبل عرضه — يمنع XSS.
- * يعمل في المتصفح فقط؛ على الخادم يرجع نصاً فارغاً (المكوّن يعرض بعد التركيب).
+ * يعمل في الخادم (isomorphic-dompurify عبر jsdom) والمتصفح (DOMPurify) بنفس الإعدادات،
+ * فيظهر نص المادة كاملاً في HTML الخادم، ويطابق ناتج المتصفح عند الـ hydration.
  */
 export function sanitizeHtml(html: string | null | undefined): string {
-  if (!html || typeof window === "undefined" || !DOMPurify.isSupported) return "";
+  if (!html) return "";
   configure();
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },

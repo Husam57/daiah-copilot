@@ -1,13 +1,17 @@
 """تسجيل الدخول + بيانات المستخدم الحالي."""
 import secrets
+import threading
+import time
+from collections import defaultdict, deque
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import EmailStr, Field
 
 from ..db import get_supabase
 from ..models import _Model
 from ..schemas import LoginRequest, MessageResponse, TokenResponse, User
 from ..security import create_access_token, get_current_user, hash_password, verify_password
+from .chat import client_ip
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -15,8 +19,38 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 _DUMMY_HASH = hash_password(secrets.token_hex(16))
 
 
+# ============ حد المحاولات الفاشلة (في الذاكرة، لكل IP) — ضد تخمين كلمة المرور ============
+LOGIN_MAX_FAILS = 10
+LOGIN_WINDOW = 15 * 60.0
+_fails: dict[str, deque] = defaultdict(deque)
+_fails_lock = threading.Lock()
+
+
+def _recent_fails(ip: str, now: float) -> deque:
+    q = _fails[ip]
+    while q and now - q[0] > LOGIN_WINDOW:
+        q.popleft()
+    return q
+
+
+def reset_login_limit() -> None:
+    """للاختبارات فقط."""
+    with _fails_lock:
+        _fails.clear()
+
+
 @router.post("/login", response_model=TokenResponse, summary="تسجيل الدخول")
-def login(body: LoginRequest) -> TokenResponse:
+def login(body: LoginRequest, request: Request) -> TokenResponse:
+    ip, now = client_ip(request), time.monotonic()
+    with _fails_lock:
+        q = _recent_fails(ip, now)
+        if len(q) >= LOGIN_MAX_FAILS:
+            retry = int(LOGIN_WINDOW - (now - q[0])) + 1
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                f"محاولات دخول فاشلة كثيرة، حاول بعد {max(1, retry // 60)} دقيقة",
+                headers={"Retry-After": str(retry)},
+            )
     rows = (
         get_supabase().table("users").select("id, name, email, role, password_hash")
         .eq("email", body.email.lower()).limit(1).execute().data
@@ -24,6 +58,11 @@ def login(body: LoginRequest) -> TokenResponse:
     row = rows[0] if rows else None
     ok = verify_password(body.password, row["password_hash"] if row else _DUMMY_HASH)
     if not row or not ok:
+        with _fails_lock:
+            _recent_fails(ip, now).append(now)
+            if len(_fails) > 10_000:
+                for k in [k for k, v in _fails.items() if not v or now - v[-1] > LOGIN_WINDOW]:
+                    _fails.pop(k, None)
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "البريد الإلكتروني أو كلمة المرور غير صحيحة"
         )

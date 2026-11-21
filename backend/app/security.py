@@ -1,4 +1,5 @@
 """المصادقة: كلمات المرور (bcrypt) + رموز الدخول JWT (PyJWT, HS256, 12 ساعة)."""
+import logging
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -9,6 +10,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from .config import settings
 from .db import get_supabase
 from .models import User
+
+log = logging.getLogger("daiah")
 
 JWT_ALGORITHM = "HS256"
 TOKEN_TTL = timedelta(hours=12)
@@ -26,8 +29,10 @@ def _unauthorized(msg: str) -> HTTPException:
 
 
 def _secret() -> str:
-    if not settings.jwt_secret:
-        raise HTTPException(500, "إعداد الخادم ناقص: JWT_SECRET غير موجود في backend/.env")
+    # في الإنتاج نرفض مفتاحاً قصيراً (سهل التخمين)؛ التفاصيل في السجل فقط لا في الرد
+    if not settings.jwt_secret or (settings.is_production and len(settings.jwt_secret) < 32):
+        log.error("JWT_SECRET غير موجود أو أقصر من 32 حرفاً")
+        raise HTTPException(500, "إعداد الخادم ناقص، راجع سجلات الخادم")
     return settings.jwt_secret
 
 

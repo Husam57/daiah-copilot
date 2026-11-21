@@ -118,7 +118,9 @@ const POST = {
   content_ar:
     "<h2>الإضاءة</h2><p>يحتاج نبات الصبار إلى ضوء شمس غير مباشر وقوي لعدة ساعات يومياً، لذلك ضعه قرب نافذة مشمسة.</p>" +
     "<h2>الري</h2><p>اسقِ الصبار مرة كل أسبوعين في الصيف، ومرة واحدة كل شهر في الشتاء، واترك التربة تجف تماماً بين كل ريّة وأخرى.</p>" +
-    "<ul><li>استخدم أصيصاً فيه ثقوب تصريف.</li><li>اختر تربة رملية خاصة بالصبار.</li></ul>",
+    "<ul><li>استخدم أصيصاً فيه ثقوب تصريف.</li><li>اختر تربة رملية خاصة بالصبار.</li></ul>" +
+    // لفحص التنظيف في الخادم: يجب أن يُحذف السكربت ومعالج onerror من HTML الصفحة
+    '<p>نهاية المادة<img src="x" onerror="window.__xss_e2e=1"></p><script>window.__xss_e2e=2</script>',
   content_en:
     "<p>Cactus plants need bright indirect sunlight. Water them every two weeks in summer and once a month in winter, letting the soil dry out completely.</p>",
   summary_ar: "دليل مبسط للعناية بالصبار في المنزل.",
@@ -235,6 +237,19 @@ async function scenario() {
     step("صفحة المادة (API): النص حرفياً", r.status === 200 && r.data?.content_ar === POST.content_ar && r.data?.content_en === POST.content_en, info(r));
     step("صفحة المادة: اسم المراجع (reviewed_by_name)", typeof r.data?.reviewed_by_name === "string" && r.data.reviewed_by_name.length > 0, String(r.data?.reviewed_by_name));
     await checkPage(`/posts/${slug}`, { contains: POST.title_ar });
+    try {
+      const page = (await fetchPage(`/posts/${slug}`)).html;
+      const body = page.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+      const missing = ["اترك التربة تجف تماماً", "نهاية المادة", ">الري</h2>"].filter((x) => !body.includes(x));
+      step("صفحة المادة: النص كاملاً في HTML الخادم (منظّفاً بـ DOMPurify)", missing.length === 0,
+        missing.length ? `غير موجود: ${missing.join(" | ")} — ${(body.match(/prose-content[^>]*>.{0,160}/) || ["(لا prose-content)"])[0]}` : "");
+      // بيانات RSC داخل سكربتات Next تحمل النص الخام كسلسلة (غير منفَّذة)، فنفحص الوسوم المرسومة فقط
+      const markup = page.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, (m) => (m.includes("__xss_e2e=2") && !m.includes("self.__next_f") ? "INJECTED" : ""));
+      step("صفحة المادة: الخادم حذف السكربت ومعالج onerror",
+        !markup.includes("INJECTED") && !/onerror\s*=/i.test(markup) && !markup.includes("__xss_e2e"));
+    } catch (e) {
+      step("صفحة المادة: النص كاملاً في HTML الخادم", false, e.message);
+    }
     await checkPage(`/posts/${slug}`, { lang: "en", contains: POST.title_en });
     r = await call("GET", `/api/posts/${slug}/related`);
     step("مواد ذات صلة (API)", r.status === 200 && Array.isArray(r.data) && !r.data.some((p) => p.slug === slug), info(r));
@@ -297,6 +312,26 @@ async function main() {
   await checkPage(`/no-such-page-${TAG}`, { status: 404 });
   // notFound() داخل الصفحة: Next يرسل غلافاً مبسطاً ثم يرسم 404 بالهوية نفسها (lang/dir يضبطها العميل)
   await checkPage(`/posts/no-such-post-${TAG}`, { status: 404, skipDir: true, contains: "الصفحة غير موجودة" });
+
+  // قاعدة بلا محتوى (كما بعد النشر مباشرة): حالات فارغة واضحة + المساعد يرجع fallback مفهوماً
+  const total = (await call("GET", "/api/posts?page_size=1")).data?.total;
+  if (total === 0) {
+    console.log("\n— القاعدة فارغة من المحتوى —");
+    const EMPTY = [
+      ["/", "ar", "لا توجد مواد منشورة بعد"], ["/", "en", "No published materials yet"],
+      ["/library", "ar", "لا توجد مواد منشورة بعد"], ["/library", "en", "No published materials yet"],
+      ["/shubuhat", "ar", "لا توجد ردود منشورة بعد"], ["/shubuhat", "en", "No published responses yet"],
+      ["/intro", "ar", "لم تُنشر مواد تعريفية بعد"], ["/intro", "en", "No introductory materials published yet"],
+      ["/new-muslim", "ar", "لم تُضف مواد هذا المسار بعد"], ["/new-muslim", "en", "This path has no materials yet"],
+    ];
+    for (const [path, lang, text] of EMPTY) await checkPage(path, { lang, contains: text });
+    const r = await call("POST", "/api/chat", { message: QUESTION, lang: "ar", session_id: SESSION });
+    step("قاعدة فارغة: المساعد يرجع fallback برسالة وبدون مادة",
+      r.status === 200 && r.data?.type === "fallback" && !r.data?.post && typeof r.data?.message === "string" && r.data.message.length > 10,
+      r.status === 200 ? `type=${r.data?.type}` : info(r));
+  } else {
+    console.log(`\n(تخطي فحص القاعدة الفارغة: فيها ${total ?? "?"} منشوراً)`);
+  }
 
   console.log("\n— السيناريو عبر الـ API —");
   await scenario();

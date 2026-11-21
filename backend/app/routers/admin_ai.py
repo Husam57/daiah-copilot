@@ -177,7 +177,7 @@ class AITestRequest(_Model):
 
 @router.post("/test", summary="مختبر: نفس مسار المساعد بدون تسجيل، مع كل التفاصيل")
 def ai_test(body: AITestRequest) -> dict:
-    out = run_agent(body.message, body.lang, get_active_settings())
+    out = run_agent(body.message, body.lang, get_active_settings(), show_errors=True)
     return {**out["details"], "preview": out["response"]}
 
 

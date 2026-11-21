@@ -3,6 +3,7 @@
 القاعدة الذهبية: post.content = content_ar/content_en من جدول posts حرفياً (لا يمر على أي نموذج).
 النموذج يكتب فقط جملة التوجيه (من العنوان واسم القسم) ويصنّف السؤال.
 """
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
@@ -66,14 +67,18 @@ def _referrals() -> list[dict]:
     )
 
 
-def run_agent(message: str, lang: str, cfg: AISettings) -> dict:
-    """يرجع {response, details}. response = ما يراه المستخدم، details = للمختبر والسجل."""
+def run_agent(message: str, lang: str, cfg: AISettings, *, show_errors: bool = False) -> dict:
+    """يرجع {response, details}. response = ما يراه المستخدم، details = للمختبر والسجل.
+    show_errors: تفاصيل خطأ Gemini في الرد (للمختبر في اللوحة فقط)؛ الزائر يرى رسالة عامة."""
     f_class = _pool.submit(classify, message)
     f_vec = _pool.submit(embed_query, message)
     try:
         vector = f_vec.result()
     except EmbeddingError as e:
-        raise HTTPException(503, f"المساعد غير متاح مؤقتاً: {e}") from None
+        logging.getLogger("daiah").warning("embed_query failed: %s", e)
+        raise HTTPException(
+            503, f"المساعد غير متاح مؤقتاً: {e}" if show_errors else "المساعد غير متاح مؤقتاً، حاول بعد قليل"
+        ) from None
     results = search(message, lang, cfg.top_k, query_vector=vector)
     classification = f_class.result()
     reply_lang = classification["lang"]  # لغة جملة التوجيه/رسالة البدائل = لغة السؤال

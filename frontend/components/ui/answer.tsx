@@ -3,7 +3,6 @@
 import { Building2, ExternalLink, Globe, Mail, SearchX, ShieldCheck } from "lucide-react";
 import * as React from "react";
 import { BookIcon } from "@/components/brand";
-import type { TextBlock } from "@/lib/html-blocks";
 import type { ReferralCenter } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SafeHtml } from "./safe-html";
@@ -25,6 +24,7 @@ export interface AnswerLabels {
   centers: string;
   visitSite: string;
   noCenters: string;
+  noClosest: string;
   bot: string;
 }
 
@@ -40,6 +40,7 @@ export const AR_LABELS: AnswerLabels = {
   centers: "مراكز ودعاة معتمدون",
   visitSite: "زيارة الموقع",
   noCenters: "لم تُضف مراكز معتمدة بعد.",
+  noClosest: "لا توجد بعد مادة منشورة قريبة من سؤالك.",
   bot: "رفيق الداعية",
 };
 
@@ -58,7 +59,6 @@ export function ApprovedTextCard({
   labels = AR_LABELS,
   headingLevel = "h2",
   actions,
-  fallback,
   className,
 }: {
   title: string;
@@ -74,8 +74,6 @@ export function ApprovedTextCard({
   headingLevel?: "h2" | "h3";
   /** أزرار إضافية في التذييل بجانب «اقرأ المادة كاملة» (مثل «شارك المادة») */
   actions?: React.ReactNode;
-  /** نص الخادم قبل التحميل (انظر SafeHtml) */
-  fallback?: TextBlock[];
   className?: string;
 }) {
   const dir = lang === "en" ? "ltr" : "rtl";
@@ -96,7 +94,7 @@ export function ApprovedTextCard({
       <div className="flex flex-col gap-3 p-5" lang={lang} dir={dir}>
         {langFallback && <p className="rounded-sm bg-surface px-2.5 py-1.5 text-xs text-text-secondary">{labels.langFallbackNote}</p>}
         <H className="text-xl font-bold leading-[30px] text-primary-700">{title}</H>
-        <SafeHtml html={html} fallback={fallback} className="text-[17px] leading-8" />
+        <SafeHtml html={html} className="text-[17px] leading-8" />
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-approved-border px-5 py-3.5 text-sm text-text-secondary">
         <span className="min-w-0">
@@ -263,6 +261,8 @@ export function FallbackCard({
           )}
         </div>
       </div>
+
+      {!closest && <p className="text-sm text-text-muted">{labels.noClosest}</p>}
 
       {closest && (
         <a

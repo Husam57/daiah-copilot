@@ -1,11 +1,12 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { API_URL } from "@/lib/env";
 
 /**
- * جلب بيانات الموقع العام على الخادم (بدون JWT). API_URL (خاص بالخادم) ثم NEXT_PUBLIC_API_URL.
+ * جلب بيانات الموقع العام على الخادم (بدون JWT) من NEXT_PUBLIC_API_URL (lib/env.ts).
  * المسارات العامة لا ترجع إلا المنشور، والنص يُعرض كما هو بعد التنظيف بـ DOMPurify.
  */
-const BASE = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+const BASE = API_URL;
 
 export class PublicApiError extends Error {
   constructor(public status: number, message: string) {

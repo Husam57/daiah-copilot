@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app.config import redact, settings
 from app.db import get_supabase
 from app.main import app
+from app.routers.auth import LOGIN_MAX_FAILS, reset_login_limit
 from app.security import hash_password
 
 try:
@@ -49,6 +50,28 @@ def main() -> int:
     # 1) تسجيل الدخول
     r = client.post("/api/auth/login", json={"email": settings.admin_email, "password": "wrong-pass"})
     step("كلمة مرور خاطئة تُرفض", r.status_code == 401, detail(r))
+
+    # حد المحاولات الفاشلة: من IP مختلف حتى لا يؤثر على بقية الاختبار
+    fake_ip = {"X-Forwarded-For": "203.0.113.77"}
+    codes = [client.post("/api/auth/login", headers=fake_ip,
+                         json={"email": "nobody@example.com", "password": "x"}).status_code
+             for _ in range(LOGIN_MAX_FAILS + 1)]
+    r = client.post("/api/auth/login", headers=fake_ip,
+                    json={"email": settings.admin_email, "password": settings.admin_password})
+    step(f"حد المحاولات: بعد {LOGIN_MAX_FAILS} فاشلة → 429 حتى بكلمة صحيحة",
+         codes[:LOGIN_MAX_FAILS] == [401] * LOGIN_MAX_FAILS and codes[-1] == 429 and r.status_code == 429,
+         f"{codes[-1]}, {detail(r)}")
+    reset_login_limit()
+
+    # CORS: الأصل غير المسموح لا يحصل على Access-Control-Allow-Origin
+    r = client.options("/api/posts", headers={"Origin": "https://evil.example.com",
+                                               "Access-Control-Request-Method": "GET"})
+    step("CORS يرفض أصلاً غير مدرج في CORS_ORIGINS",
+         "access-control-allow-origin" not in r.headers, f"HTTP {r.status_code}")
+    allowed = settings.cors_origins[0] if settings.cors_origins else None
+    if allowed:
+        r = client.options("/api/posts", headers={"Origin": allowed, "Access-Control-Request-Method": "GET"})
+        step("CORS يسمح بأصل مدرج", r.headers.get("access-control-allow-origin") == allowed, f"HTTP {r.status_code}")
 
     r = client.post(
         "/api/auth/login",

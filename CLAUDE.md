@@ -76,14 +76,15 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - <html lang="ar" dir="rtl">، Tajawal + Inter عبر next/font. خصائص منطقية فقط (ms/me/ps/pe/start/end).
 - lib/api.ts: عميل موحد (JWT من localStorage `daiah.token`، أخطاء عربية، 401 -> حدث يحوّل لـ /admin/login?next=). lib/auth.tsx: AuthProvider. lib/use-api.ts: useApi.
 - components/ui/: المكونات المشتركة (ApprovedTextCard, GuidanceBubble, FallbackCard, SourceChip, StatCard, StatusDot, Stepper, DataTable, ...). /design-system يعرضها.
-- app/admin/login + app/admin/(panel)/* (محمية في layout). أي HTML منشور يُعرض عبر SafeHtml (DOMPurify).
-  SafeHtml يقبل fallback (lib/html-blocks.ts: نص المادة ككتل نصية مُهرَّبة عبر React) لعرض النص في HTML الخادم قبل DOMPurify.
+- app/admin/login + app/admin/(panel)/* (محمية في layout). أي HTML منشور يُعرض عبر SafeHtml (lib/sanitize.ts).
+  التنظيف بـ isomorphic-dompurify 3.19.0 (آخر إصدار يدعم Node 20؛ 4.x يتطلب Node 22) في الخادم والمتصفح، فالنص كاملاً في HTML الخادم.
 - /admin/posts/import (الاستيراد مع المعاينة)، والرئيسية فيها QuestionsChart (components/admin/questions-chart.tsx، ألوان chart-* في globals.css).
-- frontend/.env.local: NEXT_PUBLIC_API_URL=http://localhost:8000 فقط (لا أسرار في الواجهة).
+- frontend/.env.local: NEXT_PUBLIC_API_URL و NEXT_PUBLIC_SITE_URL فقط (لا أسرار). تُقرأ في lib/env.ts وحده؛ قيم localhost في next dev فقط،
+  و next.config.ts يُفشل بناء Vercel إن غاب أحدهما أو لم يكن https عاماً.
 
 ## الموقع العام (frontend/app/(site)/) — الخطوة 7
 - الصفحات: / · /assistant · /library · /posts/[slug] · /shubuhat · /intro · /new-muslim + app/not-found.tsx و (site)/not-found.tsx.
-- مكونات خادم تجلب من الـ API عبر lib/public-api.ts (API_URL للخادم ثم NEXT_PUBLIC_API_URL)؛ البحث الفوري في الشبهات والمساعد من المتصفح عبر lib/site-api.ts (بلا JWT).
+- مكونات خادم تجلب من الـ API عبر lib/public-api.ts (NEXT_PUBLIC_API_URL)؛ البحث الفوري في الشبهات والمساعد من المتصفح عبر lib/site-api.ts (بلا JWT).
 - اللغة: كوكي daiah.lang (ar افتراضياً | en). proxy.ts يمرر x-daiah-path، و app/layout.tsx يضبط lang/dir على <html> (اللوحة و /design-system عربية دائماً).
   نصوص الواجهة في lib/i18n/dictionaries.ts فقط (بلا أي محتوى شرعي). المحتوى الإنجليزي إن وُجد وإلا العربي مع تنبيه.
 - الأقسام والمسارات والتصنيفات وخطوات المسلم الجديد تُقرأ من القاعدة؛ عند غيابها EmptyState.
@@ -94,6 +95,12 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 ## الاختبارات (من مجلد backend، على Supabase و Gemini الحقيقيين، وتحذف بياناتها)
 import_test.py (الاستيراد) · bench_test.py (زمن /api/chat والمسارات العامة، --json) · rag_test.py --eval-only --json PATH (تقييم الدقة: semantic و hybrid أو محاكاته hybrid_sim) ·
 e2e_run.py (يشغّل frontend/scripts/e2e-check.mjs: صفحات اللوحة والموقع بالعربية والإنجليزية + 404 + سيناريو كامل حتى /api/chat؛ يتطلب السيرفرين يعملان، ويحذف سجلات المحادثة التي ينشئها) · public_test.py (المسارات العامة + التجاهل والفترة) · smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
+
+## النشر (الخطوة 8) — الدليل الكامل: docs/deploy.md
+- render.yaml في الجذر (rootDir backend، PYTHON_VERSION 3.13، /api/health، free). على Render: SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, JWT_SECRET, CORS_ORIGINS فقط (ADMIN_* للتشغيل المحلي).
+- الإنتاج = RENDER=true أو APP_ENV=production: CORS_ORIGINS فقط (بلا * وبلا افتراضي localhost)، /docs و /openapi.json مغلقة، JWT_SECRET ≥ 32.
+- حد الدخول: 10 محاولات فاشلة / 15 دقيقة لكل IP (auth.py). خطأ Gemini في /api/chat رسالة عامة (التفاصيل في المختبر فقط show_errors).
+- Vercel: Root Directory = frontend. القاعدة نفسها للمحلي والإنتاج.
 
 ## الأمان
 - المفاتيح في backend/.env فقط (SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD). لا تعرض قيمها أبداً ولا تطبعها.

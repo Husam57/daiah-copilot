@@ -3,7 +3,9 @@
  * لا يحتوي أي سر: العنوان من NEXT_PUBLIC_API_URL فقط.
  */
 
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+import { API_URL } from "@/lib/env";
+
+export { API_URL };
 
 export const TOKEN_KEY = "daiah.token";
 export const UNAUTHORIZED_EVENT = "daiah:unauthorized";

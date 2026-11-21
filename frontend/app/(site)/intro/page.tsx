@@ -115,8 +115,8 @@ export default async function IntroPage({ searchParams }: PageProps<"/intro">) {
         <div className="rounded-lg border border-border bg-surface">
           <EmptyState
             icon={<SearchX />}
-            title={t.intro.empty}
-            description={t.intro.emptyHint}
+            title={lang || type ? t.intro.empty : t.intro.emptyNone}
+            description={lang || type ? t.intro.emptyHint : t.intro.emptyNoneHint}
             action={
               <Link href="/library" className="inline-flex h-11 items-center rounded-md border border-border px-5 font-bold hover:bg-primary-50">
                 {t.nav.library}
