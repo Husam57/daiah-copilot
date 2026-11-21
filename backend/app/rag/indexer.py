@@ -6,6 +6,7 @@ from ..db import get_supabase
 from ..utils import fetch_all
 from .chunking import chunk_text
 from .embeddings import embed_texts
+from .normalize import normalize_ar
 
 log = logging.getLogger("daiah.rag")
 
@@ -51,7 +52,8 @@ def index_post(post_id: int) -> dict:
     chunks = build_chunks(post)
     if not chunks:
         raise IndexingError("المنشور لا يحتوي نصاً قابلاً للفهرسة")
-    vectors = embed_texts([c[2] for c in chunks], "RETRIEVAL_DOCUMENT")
+    # التضمين على النص الموحَّد (للبحث فقط)؛ chunk_text يُحفظ كما هو
+    vectors = embed_texts([normalize_ar(c[2]) for c in chunks], "RETRIEVAL_DOCUMENT")
 
     sb = get_supabase()
     rows = [

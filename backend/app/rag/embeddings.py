@@ -11,6 +11,7 @@ from google import genai
 from google.genai import errors, types
 
 from ..config import EMBEDDING_DIM, EMBEDDING_MODEL, redact, settings
+from .normalize import normalize_ar
 
 log = logging.getLogger("daiah.rag")
 
@@ -84,5 +85,5 @@ def embed_texts(
 
 
 def embed_query(text: str) -> list[float]:
-    """سؤال المستخدم: محاولتان إضافيتان فقط حتى لا ينتظر طويلاً."""
-    return embed_texts([text], "RETRIEVAL_QUERY", max_retries=2)[0]
+    """سؤال المستخدم (بعد normalize_ar): محاولتان إضافيتان فقط حتى لا ينتظر طويلاً."""
+    return embed_texts([normalize_ar(text) or text], "RETRIEVAL_QUERY", max_retries=2)[0]

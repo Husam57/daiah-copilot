@@ -21,6 +21,7 @@ from app.config import CHAT_MODELS  # noqa: F401 — يتأكد من تحميل 
 from app.db import get_supabase
 from app.ai_config import get_active_settings
 from app.rag import search as search_mod
+from app.rag.normalize import normalize_ar
 from app.rag.search import search
 from testkit import (
     EVAL_FAR_QUESTIONS, EVAL_QUESTIONS, FAR_QUESTIONS, MATCH_QUESTIONS, cleanup, client,
@@ -164,6 +165,16 @@ def main() -> int:
              str(sorted(langs)))
         step("كل مقطع يبدأ بالعنوان", all(c["chunk_text"].startswith(("العنوان: ", "Title: ")) for c in chunks))
         step("لا وسوم HTML في المقاطع", not any("<p>" in c["chunk_text"] for c in chunks))
+        step("المقاطع محفوظة بنصها الأصلي (التوحيد للتضمين فقط)",
+             any("ة" in c["chunk_text"] or "أ" in c["chunk_text"] for c in chunks if c["lang"] == "ar"))
+        cases = {
+            "كَيْفَ أُنَظِّفُ سِلْسِلَةَ الدَّرَّاجَةِ؟": "كيف انظف سلسله الدراجه؟",
+            "الخيــــار   والرطوبة": "الخيار والرطوبه",
+            "إسلام آدم أحمد مستشفى ٱلحق": "اسلام ادم احمد مستشفي الحق",
+            "Hello  World": "Hello World",
+        }
+        bad = {k: normalize_ar(k) for k, v in cases.items() if normalize_ar(k) != v}
+        step("normalize_ar: الهمزات، ى، ة، التشكيل، التطويل، المسافات", not bad, str(bad))
 
         # ---------- أسئلة مطابقة ----------
         print("\n— الأسئلة المطابقة —")
