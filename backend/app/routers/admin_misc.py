@@ -234,3 +234,36 @@ def system_status(refresh: bool = False) -> dict:
     with _status_lock:
         _status_cache.update(at=time.monotonic(), data=data)
     return data
+
+
+# ============ الأسئلة يومياً (رسم الرئيسية) ============
+@dashboard.get("/questions-daily", summary="عدد الأسئلة وغير المجابة لكل يوم (آخر N أيام، بالأيام الفارغة)")
+def questions_daily(
+    days: int = Query(7, ge=1, le=90),
+    tz_offset: int = Query(0, ge=-720, le=840, description="فرق التوقيت المحلي عن UTC بالدقائق (الرياض = 180)"),
+) -> dict:
+    """لكل يوم: questions (كل الأسئلة)، fallback (غير المجابة)، answered، fallback_rate.
+    الأيام بالتوقيت المحلي للمتصفح. المتجاهَل يُحسب في الإجمالي (هو سؤال طُرح فعلاً)."""
+    tz = timezone(timedelta(minutes=tz_offset))
+    today = datetime.now(tz).date()
+    start_day = today - timedelta(days=days - 1)
+    start = datetime(start_day.year, start_day.month, start_day.day, tzinfo=tz)
+    sb = get_supabase()
+    rows = fetch_all(
+        lambda: sb.table("chat_logs").select("created_at, is_fallback").gte("created_at", start.isoformat()).order("id")
+    )
+    buckets = {start_day + timedelta(days=i): [0, 0] for i in range(days)}
+    for r in rows:
+        d = _ts(r["created_at"]).astimezone(tz).date()
+        if d in buckets:
+            buckets[d][0] += 1
+            buckets[d][1] += 1 if r["is_fallback"] else 0
+    items = [
+        {"date": d.isoformat(), "questions": q, "fallback": f, "answered": q - f,
+         "fallback_rate": round(f / q, 4) if q else None}
+        for d, (q, f) in buckets.items()
+    ]
+    total = sum(i["questions"] for i in items)
+    fb = sum(i["fallback"] for i in items)
+    return {"days": days, "tz_offset": tz_offset, "items": items, "total": total, "fallback": fb,
+            "fallback_rate": round(fb / total, 4) if total else None}

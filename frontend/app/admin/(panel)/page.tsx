@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { QuestionsChart } from "@/components/admin/questions-chart";
 import { useShell } from "@/components/admin/shell-context";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -113,6 +114,8 @@ export default function DashboardPage() {
           />
         </div>
       )}
+
+      <QuestionsChart />
 
       <div className="flex flex-wrap items-start gap-6">
         <SystemStatusCard className="min-w-0 flex-[1_1_320px]" />

@@ -202,6 +202,22 @@ def main() -> int:
         ins = sb.table("chat_logs").insert(rows).execute().data
         created["logs"] = [x["id"] for x in ins]
 
+        # ---- الرسم البياني: الأسئلة يومياً (آخر 7 أيام) ----
+        r = client.get("/api/admin/dashboard/questions-daily?days=7&tz_offset=0", headers=headers)
+        d = r.json() if r.status_code == 200 else {}
+        items = d.get("items", [])
+        today = items[-1] if items else {}
+        step("questions-daily: 7 أيام متتالية تنتهي باليوم",
+             len(items) == 7 and today.get("date") == datetime.now(timezone.utc).date().isoformat(), detail(r))
+        step("اليوم يشمل السؤالين غير المجابين، والقديم (12 يوماً) خارج النطاق",
+             today.get("fallback", 0) >= 2 and today.get("questions", 0) >= today.get("fallback", 0)
+             and today.get("answered") == today.get("questions", 0) - today.get("fallback", 0), str(today))
+        step("نسبة غير المجابة محسوبة", today.get("fallback_rate") is not None and 0 < today["fallback_rate"] <= 1)
+        r = client.get("/api/admin/dashboard/questions-daily?days=7&tz_offset=180", headers=headers)
+        step("questions-daily بفرق توقيت (الرياض)", r.status_code == 200 and len(r.json()["items"]) == 7)
+        r = client.get("/api/admin/dashboard/questions-daily")
+        step("questions-daily يتطلب JWT", r.status_code == 401)
+
         def unanswered(period: str) -> dict:
             r = client.get(f"/api/admin/ai/unanswered?limit=200&period={period}", headers=headers)
             # المفتاح = السؤال بلا علامة الاستفهام (السجلان المتطابقان يُجمعان تحت أحدهما)

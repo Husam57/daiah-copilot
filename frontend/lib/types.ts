@@ -372,3 +372,12 @@ export interface ImportResult {
   created: number;
   rows: ImportRow[];
 }
+
+export interface DailyQuestions {
+  days: number;
+  tz_offset: number;
+  total: number;
+  fallback: number;
+  fallback_rate: number | null;
+  items: { date: string; questions: number; fallback: number; answered: number; fallback_rate: number | null }[];
+}

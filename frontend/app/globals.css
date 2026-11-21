@@ -46,6 +46,10 @@
   --color-danger: #b4362f;
   --color-danger-bg: #fbeae8;
   --color-danger-fg: #8f2a24; /* نص على danger-bg */
+
+  /* الرسوم البيانية (مُتحقق منها: تمييز عمى الألوان ΔE 11، تباين ≥ 3:1 على الأبيض) */
+  --color-chart-answered: #00897a;
+  --color-chart-unanswered: #b97a1e;
   --color-info: #2563a6;
   --color-info-bg: #e8f0fa;
   --color-info-fg: #1f548d; /* نص على info-bg */
