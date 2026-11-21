@@ -36,15 +36,17 @@ users(id, name, email, password_hash, role[admin|editor])
 ## الـ API
 Auth: POST /api/auth/login, GET|PUT /api/auth/me {name, email}, PUT /api/auth/me/password {current_password, new_password}
 Admin (JWT): /api/admin/sections, /api/admin/posts (?status=&section_id=&content_type=&lang=en|ar_only&q=&page=), POST /api/admin/posts/{id}/publish,
+  POST /api/admin/posts/import {format: json|csv, content, status: draft|review, dry_run} (قالب: docs/content-template.*؛ لا نشر تلقائي؛ يُستورد الصالح فقط)،
   POST /api/admin/posts/{id}/reindex, POST /api/admin/posts/{id}/return-to-draft {note?},
   GET|PUT /api/admin/ai/settings, GET /api/admin/ai/settings/history, POST /api/admin/ai/settings/restore/{history_id}, POST /api/admin/ai/reindex, GET /api/admin/ai/index-status, POST /api/admin/ai/test,
   GET /api/admin/ai/logs?fallback=&page=, GET /api/admin/ai/unanswered?period=7d|30d|all, POST /api/admin/ai/unanswered/ignore {question},
   CRUD /api/admin/referral-centers,
-  GET /api/admin/dashboard/stats, GET /api/admin/dashboard/activity, GET /api/admin/dashboard/system-status?refresh=
+  GET /api/admin/dashboard/stats, GET /api/admin/dashboard/activity, GET /api/admin/dashboard/system-status?refresh=,
+  GET /api/admin/dashboard/questions-daily?days=7&tz_offset= (رسم الرئيسية)
 Public (بدون JWT، المنشور فقط وفي أقسام مفعّلة):
   GET /api/sections?category= (+posts_count يشمل الفرعية) · /api/categories · /api/topics?category=&section=
   GET /api/posts?q=&section=&category=&topic=&content_type=&lang=en&tag=&page=&page_size= (بطاقات: excerpt + reading_minutes + has_en + section)
-  GET /api/posts/latest?limit= · /api/posts/{slug} (+reading_minutes) · /api/posts/{slug}/related · /api/sections/{slug}/posts · /api/referral-centers
+  GET /api/posts/latest?limit= · /api/posts/{slug} (+reading_minutes, reviewed_by_name) · /api/posts/{slug}/related · /api/sections/{slug}/posts · /api/referral-centers
   وقت القراءة = كلمات النص / 200 (دقيقة على الأقل). excerpt = الملخص أو أول سطور النص المنشور نفسه.
 Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ..., sources, threshold, log_id}, POST /api/chat/feedback {log_id, helpful}
   (حد 20 طلباً/دقيقة لكل IP في الذاكرة)
@@ -55,6 +57,11 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - indexer.py: index_post (embeddings أولاً ثم استبدال المقاطع + indexed_at)، unindex_post، reindex_all (المنشورة فقط).
 - search.py: search(query, lang, top_k) عبر match_post_chunks، تجميع حسب المنشور بأعلى درجة. lang=en يبحث في en و ar معاً.
 - الربط: publish -> index_post. PUT على منشور منشور غيّر title/content -> index_post. إلغاء النشر -> unindex_post. فشل الفهرسة = index_warning في الرد ولا يلغي الحفظ.
+- normalize.py: normalize_ar (أ إ آ ٱ←ا، ى←ي، ة←ه، حذف التشكيل والتطويل، NFKC، المسافات) على نص التضمين والسؤال فقط؛ chunk_text يُحفظ كما هو.
+- البحث الهجين: match_post_chunks_hybrid (pg_trgm word_similarity على post_chunks.search_text المحسوب) + دلالي، دمج RRF (k=60) على مستوى المنشور.
+  العتبة على التشابه الدلالي فقط: pick_match = أول نتيجة بترتيب الدمج تشابهها ≥ العتبة. أي خطأ/غياب للدالة = رجوع تلقائي للدلالي (SEARCH_MODE=semantic لفرضه).
+- الكاش (app/cache.py، في الذاكرة): تضمين السؤال (6 س)، التصنيف وجملة التوجيه (ساعة، نتيجة النموذج فقط)، الإعدادات لـ /api/chat (15 ث)،
+  المسارات العامة + _load_post + المراكز (60 ث). أي POST/PUT/DELETE ناجح على /api/admin/* أو /api/auth/me يُبطل كاش العام والإعدادات (middleware).
 - العتبة الحالية similarity_threshold = 0.59 (من rag_test.py على بيانات تجريبية؛ أعد معايرتها بالمحتوى الحقيقي).
 
 ## الإيجنت (backend/app/agent/) — الخطوة 5
@@ -70,6 +77,8 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - lib/api.ts: عميل موحد (JWT من localStorage `daiah.token`، أخطاء عربية، 401 -> حدث يحوّل لـ /admin/login?next=). lib/auth.tsx: AuthProvider. lib/use-api.ts: useApi.
 - components/ui/: المكونات المشتركة (ApprovedTextCard, GuidanceBubble, FallbackCard, SourceChip, StatCard, StatusDot, Stepper, DataTable, ...). /design-system يعرضها.
 - app/admin/login + app/admin/(panel)/* (محمية في layout). أي HTML منشور يُعرض عبر SafeHtml (DOMPurify).
+  SafeHtml يقبل fallback (lib/html-blocks.ts: نص المادة ككتل نصية مُهرَّبة عبر React) لعرض النص في HTML الخادم قبل DOMPurify.
+- /admin/posts/import (الاستيراد مع المعاينة)، والرئيسية فيها QuestionsChart (components/admin/questions-chart.tsx، ألوان chart-* في globals.css).
 - frontend/.env.local: NEXT_PUBLIC_API_URL=http://localhost:8000 فقط (لا أسرار في الواجهة).
 
 ## الموقع العام (frontend/app/(site)/) — الخطوة 7
@@ -83,6 +92,7 @@ Agent: POST /api/chat {message, lang, session_id} -> {type: match|fallback, ...,
 - components/ui/answer.tsx مشتركة بين المختبر والموقع، وتقبل labels للإنجليزية.
 
 ## الاختبارات (من مجلد backend، على Supabase و Gemini الحقيقيين، وتحذف بياناتها)
+import_test.py (الاستيراد) · bench_test.py (زمن /api/chat والمسارات العامة، --json) · rag_test.py --eval-only --json PATH (تقييم الدقة: semantic و hybrid أو محاكاته hybrid_sim) ·
 e2e_run.py (يشغّل frontend/scripts/e2e-check.mjs: صفحات اللوحة والموقع بالعربية والإنجليزية + 404 + سيناريو كامل حتى /api/chat؛ يتطلب السيرفرين يعملان، ويحذف سجلات المحادثة التي ينشئها) · public_test.py (المسارات العامة + التجاهل والفترة) · smoke_test.py · rag_test.py (يحفظ العتبة المقترحة؛ --no-save لمنعه) · agent_test.py · testkit.py (بيانات محايدة مشتركة)
 
 ## الأمان
