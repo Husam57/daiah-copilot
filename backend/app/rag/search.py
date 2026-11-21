@@ -60,10 +60,11 @@ def _hybrid_rows(vec: str, query: str, lang: str, count: int) -> list[dict] | No
             "text_min": TEXT_MIN,
         }).execute().data or []
     except APIError as e:
-        if e.code in ("PGRST202", "42883"):  # الدالة غير موجودة في ذاكرة PostgREST / Postgres
-            _mark_hybrid_missing()
-            return None
-        raise
+        # الدالة غير موجودة (PGRST202 / 42883) أو أي خطأ فيها: لا نُفشل المساعد، نرجع للدلالي
+        if e.code not in ("PGRST202", "42883"):
+            log.warning("match_post_chunks_hybrid فشلت (%s) — رجوع للبحث الدلالي", e.code)
+        _mark_hybrid_missing()
+        return None
 
 
 def fuse(rows: list[dict], top_k: int) -> list[dict]:

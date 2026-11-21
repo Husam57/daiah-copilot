@@ -212,6 +212,10 @@ def main() -> int:
             step("كل الأسئلة البعيدة أقل من العتبة", all(s < threshold for s in far_scores))
             step("كل التطابقات الصحيحة ≥ العتبة", all(s >= threshold for s in match_scores))
 
+        # ---------- تقييم الدقة (قبل تعديل المواد أو إلغاء نشرها) ----------
+        run_eval_stage(headers, created)
+        key_of = {v: k for k, v in ids.items()}
+
         # ---------- إعادة الفهرسة عند تعديل المحتوى ----------
         print()
         pid = ids["garden"]
@@ -234,7 +238,7 @@ def main() -> int:
         r = client.get("/api/admin/ai/index-status", headers=headers)
         st = r.json() if r.is_success else {}
         mine = [i for i in st.get("items", []) if i["post_id"] in key_of]
-        step("GET /api/admin/ai/index-status", r.status_code == 200 and len(mine) == 3
+        step("GET /api/admin/ai/index-status", r.status_code == 200 and len(mine) == len(ids)
              and all(i["state"] == "indexed" for i in mine),
              f"published={st.get('published')}, indexed={st.get('indexed')}, stale={st.get('stale')}, "
              f"chunks={st.get('total_chunks')}" if r.is_success else detail(r))
@@ -258,9 +262,6 @@ def main() -> int:
              str(b) if r.is_success else detail(r))
         n = get_supabase().table("post_chunks").select("id", count="exact").eq("post_id", pid).execute().count
         step("المسودة بقيت غير مفهرسة بعد إعادة البناء", n == 0)
-
-        # ---------- تقييم الدقة ----------
-        run_eval_stage(headers, created)
 
         # ---------- حفظ العتبة ----------
         if threshold is not None and save:

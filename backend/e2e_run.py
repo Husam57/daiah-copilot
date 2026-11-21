@@ -9,6 +9,11 @@ import secrets
 import subprocess
 import sys
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # الرموز التعبيرية حتى عند توجيه المخرجات
+except Exception:
+    pass
+
 from app.config import BACKEND_DIR, settings
 from app.db import get_supabase
 
