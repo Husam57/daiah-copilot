@@ -154,6 +154,10 @@ def main() -> int:
         b = r.json() if r.status_code == 200 else {}
         step("GET /api/posts/{slug}: النص حرفياً + وقت القراءة",
              b.get("content_ar") == LONG_AR and b.get("reading_minutes") == 3, detail(r) if r.status_code != 200 else "")
+        me = client.get("/api/auth/me", headers=headers).json()
+        step("reviewed_by_name = اسم من نشرها (بلا بريد)",
+             b.get("reviewed_by_name") == me.get("name") and me.get("email", "@") not in str(b),
+             str(b.get("reviewed_by_name")))
         r = client.get(f"/api/posts/pub-d-{TAG}")
         step("مسودة: 404", r.status_code == 404)
         r = client.get(f"/api/posts/pub-e-{TAG}")
