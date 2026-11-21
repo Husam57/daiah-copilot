@@ -5,6 +5,7 @@
 """
 import re
 
+from ..cache import TTLCache
 from .llm import generate
 
 MAX_WORDS = 30
@@ -40,8 +41,23 @@ def _valid(text: str) -> bool:
     return 0 < len(words) <= MAX_WORDS and "\n" not in text and not _FORBIDDEN.search(text)
 
 
+# الجملة تعتمد فقط على (العنوان، القسم، اللغة، تعليمات الأسلوب) فتُخزن بها؛ تعديل التعليمات = مفتاح جديد
+guidance_cache = TTLCache(maxsize=1000, ttl=3600, name="guidance")
+
+
 def make_guidance(title: str, section: str, lang: str, style_prompt: str = "") -> dict:
-    """{text, source: 'model'|'template', model}"""
+    """{text, source: 'model'|'template', model} — مخزنة لنفس المدخلات (نتيجة النموذج فقط)."""
+    key = (title, section, lang, (style_prompt or "").strip())
+    hit = guidance_cache.get(key)
+    if hit is not None:
+        return {**hit, "cached": True}
+    out = _make_guidance(title, section, lang, style_prompt)
+    if out["source"] == "model":
+        guidance_cache.set(key, out)
+    return out
+
+
+def _make_guidance(title: str, section: str, lang: str, style_prompt: str = "") -> dict:
     system = SYSTEM_RULES
     if style_prompt and style_prompt.strip():
         system += "\n\nتعليمات الأسلوب (من لوحة التحكم):\n" + style_prompt.strip()[:2000]

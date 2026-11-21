@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
 
+from ..cache import cached_public
 from ..db import get_supabase
 from ..models import AISettings
 from ..rag.embeddings import EmbeddingError, embed_query
@@ -28,6 +29,7 @@ def _brief(r: dict) -> dict:
     }
 
 
+@cached_public  # يُبطل عند أي تعديل في اللوحة، فلا يُعرض منشور أُلغي نشره
 def _load_post(post_id: int) -> dict | None:
     rows = (
         get_supabase().table("posts").select(_POST_COLUMNS)
@@ -56,6 +58,7 @@ def build_post_payload(post: dict, lang: str) -> dict:
     }
 
 
+@cached_public
 def _referrals() -> list[dict]:
     return (
         get_supabase().table("referral_centers").select("id, name, country, url, contact")

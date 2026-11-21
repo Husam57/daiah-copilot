@@ -10,6 +10,7 @@ import httpx
 from google import genai
 from google.genai import errors, types
 
+from ..cache import TTLCache
 from ..config import EMBEDDING_DIM, EMBEDDING_MODEL, redact, settings
 from .normalize import normalize_ar
 
@@ -84,6 +85,15 @@ def embed_texts(
     return out
 
 
+# الأسئلة المتكررة: نفس السؤال بعد التوحيد = نفس المتجه (يوفر طلب Gemini كاملاً)
+query_cache = TTLCache(maxsize=1000, ttl=6 * 3600, name="query_embeddings")
+
+
 def embed_query(text: str) -> list[float]:
-    """سؤال المستخدم (بعد normalize_ar): محاولتان إضافيتان فقط حتى لا ينتظر طويلاً."""
-    return embed_texts([normalize_ar(text) or text], "RETRIEVAL_QUERY", max_retries=2)[0]
+    """سؤال المستخدم (بعد normalize_ar) مع LRU+TTL. محاولتان إضافيتان فقط حتى لا ينتظر طويلاً."""
+    key = (EMBEDDING_MODEL, normalize_ar(text) or text)
+    vec = query_cache.get(key)
+    if vec is None:
+        vec = embed_texts([key[1]], "RETRIEVAL_QUERY", max_retries=2)[0]
+        query_cache.set(key, vec)
+    return vec

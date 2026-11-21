@@ -5,8 +5,10 @@
 التشغيل (من مجلد backend):  .venv\\Scripts\\python.exe public_test.py
 """
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 
+from app.cache import public_cache
 from app.db import get_supabase
 from app.routers.public import excerpt, reading_minutes
 from testkit import client, detail, login, step, summary
@@ -165,6 +167,27 @@ def main() -> int:
 
         r = client.get("/api/referral-centers")
         step("GET /api/referral-centers (عام)", r.status_code == 200 and isinstance(r.json(), list))
+
+        # ---- كاش المسارات العامة (60 ث) يُبطل عند التعديل والنشر ----
+        public_cache.clear()
+        client.get(f"/api/posts/pub-a-{TAG}")
+        t0 = time.perf_counter()
+        r1 = client.get(f"/api/posts/pub-a-{TAG}")
+        warm_ms = (time.perf_counter() - t0) * 1000
+        step("الطلب المتكرر من الكاش", r1.status_code == 200 and public_cache.stats()["hits"] >= 1,
+             f"{warm_ms:.0f} ms")
+        new_title = f"عنوان معدّل {TAG}"
+        r = client.put(f"/api/admin/posts/{ids['a']}", headers=headers, json={"title_ar": new_title})
+        r2 = client.get(f"/api/posts/pub-a-{TAG}")
+        step("تعديل العنوان يظهر فوراً (الكاش أُبطل)", r.status_code == 200 and r2.json().get("title_ar") == new_title,
+             r2.json().get("title_ar", ""))
+        lst_before = {i["slug"] for i in client.get(f"/api/posts?page_size=50&section=pub-meth-{TAG}").json()["items"]}
+        r = client.post(f"/api/admin/posts/{ids['d']}/publish", headers=headers)
+        lst_after = {i["slug"] for i in client.get(f"/api/posts?page_size=50&section=pub-meth-{TAG}").json()["items"]}
+        step("النشر يظهر فوراً في القائمة", f"pub-d-{TAG}" not in lst_before and f"pub-d-{TAG}" in lst_after,
+             f"{len(lst_before)} → {len(lst_after)}")
+        r = client.put(f"/api/admin/posts/{ids['d']}", headers=headers, json={"status": "draft"})
+        step("إلغاء النشر يخفيها فوراً", client.get(f"/api/posts/pub-d-{TAG}").status_code == 404)
 
         # ---- الأسئلة غير المجابة: الفترة + التجاهل ----
         now = datetime.now(timezone.utc).isoformat()

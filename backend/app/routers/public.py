@@ -1,5 +1,6 @@
 """المسارات العامة (بدون JWT): الأقسام النشطة + المواد المنشورة فقط.
 
+الردود مخزنة 60 ث (cached_public) وتُبطل عند أي تعديل في اللوحة.
 كل ما يُعرض هنا = حقول جدول posts كما هي (لا يمر على أي نموذج). الحقول المحسوبة فقط:
 reading_minutes (من طول النص) و excerpt (أول سطور النص المنشور نفسه إن لم يوجد ملخص).
 """
@@ -8,6 +9,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ..cache import cached_public
 from ..db import get_supabase
 from ..models import Category, ContentType
 from ..rag.chunking import clean_html
@@ -123,6 +125,7 @@ def _scope_section_ids(
 
 # ============ الأقسام ============
 @router.get("/sections", response_model=list[PublicSection], summary="الأقسام النشطة مع عدد المواد المنشورة")
+@cached_public
 def list_sections(category: Category | None = None) -> list[PublicSection]:
     sections = _active_sections()
     rows = _published_rows({s["id"] for s in sections}, "id, section_id")
@@ -140,6 +143,7 @@ def list_sections(category: Category | None = None) -> list[PublicSection]:
 
 
 @router.get("/categories", response_model=list[PublicCategoryCount], summary="عدد المواد المنشورة لكل مسار")
+@cached_public
 def category_counts() -> list[PublicCategoryCount]:
     sections = _active_sections()
     cat_of = {s["id"]: s["category"] for s in sections}
@@ -153,6 +157,7 @@ def category_counts() -> list[PublicCategoryCount]:
 
 
 @router.get("/topics", response_model=list[PublicTopic], summary="مواضيع المواد المنشورة مع العدد")
+@cached_public
 def list_topics(category: Category | None = None, section: str | None = None) -> list[PublicTopic]:
     sections = _active_sections()
     ids = _scope_section_ids(sections, section, category)
@@ -167,6 +172,7 @@ def list_topics(category: Category | None = None, section: str | None = None) ->
 @router.get(
     "/sections/{slug}/posts", response_model=PublicSectionPosts, summary="المواد المنشورة في قسم (وأقسامه الفرعية)"
 )
+@cached_public
 def section_posts(
     slug: str,
     page: int = Query(1, ge=1),
@@ -185,6 +191,7 @@ def section_posts(
 
 # ============ المواد ============
 @router.get("/posts", response_model=PublicPostPage, summary="المواد المنشورة: بحث + فلترة + ترقيم")
+@cached_public
 def list_posts(
     q: str | None = Query(None, description="بحث في العنوان والملخص والموضوع والنص والوسوم"),
     section: str | None = Query(None, description="slug القسم (يشمل الأقسام الفرعية)"),
@@ -247,6 +254,7 @@ def query_posts(
 
 
 @router.get("/posts/latest", response_model=list[PublicPostCard], summary="أحدث المواد المنشورة")
+@cached_public
 def latest_posts(limit: int = Query(6, ge=1, le=24), category: Category | None = None) -> list[PublicPostCard]:
     return query_posts(category=category, page=1, page_size=limit).items
 
@@ -264,6 +272,7 @@ def _load_published(slug: str) -> dict:
 
 
 @router.get("/posts/{slug}", response_model=PublicPost, summary="مادة منشورة كاملة")
+@cached_public
 def get_post(slug: str) -> PublicPost:
     row = _load_published(slug)
     return PublicPost(
@@ -274,6 +283,7 @@ def get_post(slug: str) -> PublicPost:
 
 
 @router.get("/posts/{slug}/related", response_model=list[PublicPostCard], summary="مواد ذات صلة بمادة")
+@cached_public
 def related_posts(slug: str, limit: int = Query(3, ge=1, le=12)) -> list[PublicPostCard]:
     """ترتيب بسيط وقابل للتفسير: وسوم مشتركة (×3) + نفس الموضوع (×2) + نفس القسم (×1) ثم الأحدث."""
     post = _load_published(slug)
@@ -302,6 +312,7 @@ def related_posts(slug: str, limit: int = Query(3, ge=1, le=12)) -> list[PublicP
 
 # ============ المراكز المعتمدة ============
 @router.get("/referral-centers", response_model=list[PublicReferralCenter], summary="المراكز المعتمدة للإحالة")
+@cached_public
 def referral_centers() -> list[PublicReferralCenter]:
     rows = get_supabase().table("referral_centers").select("id, name, country, url, contact").order("id").execute().data
     return [PublicReferralCenter(**r) for r in rows]

@@ -5,6 +5,8 @@
 import json
 import re
 
+from ..cache import TTLCache
+from ..rag.normalize import normalize_ar
 from .llm import generate
 
 CATEGORIES = ("methodology", "shubuhat", "intro_islam", "new_muslim")
@@ -39,8 +41,23 @@ def detect_lang(text: str) -> str:
     return "ar" if ar >= latin else "en"
 
 
+# نتيجة النموذج فقط تُخزن (الاحتياطي لا يُخزن حتى يُعاد المحاولة مع النموذج لاحقاً)
+classify_cache = TTLCache(maxsize=1000, ttl=3600, name="classify")
+
+
 def classify(question: str) -> dict:
-    """{category, lang, source: 'model'|'heuristic', model}"""
+    """{category, lang, source: 'model'|'heuristic', model} — مع ذاكرة مؤقتة للسؤال المتكرر."""
+    key = normalize_ar(question)[:1000]
+    hit = classify_cache.get(key)
+    if hit is not None:
+        return {**hit, "cached": True}
+    out = _classify(question)
+    if out["source"] == "model":
+        classify_cache.set(key, out)
+    return out
+
+
+def _classify(question: str) -> dict:
     fallback = {"category": "unknown", "lang": detect_lang(question), "source": "heuristic", "model": None}
     text, model = generate(
         f"Question:\n<<<\n{question[:1000]}\n>>>",

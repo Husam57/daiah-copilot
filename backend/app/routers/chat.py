@@ -72,7 +72,7 @@ class FeedbackRequest(_Model):
 @router.post("", summary="سؤال للمساعد -> مادة معتمدة (match) أو بدائل (fallback)")
 def chat(body: ChatRequest, request: Request) -> dict:
     check_rate_limit(request)
-    cfg = get_active_settings()
+    cfg = get_active_settings(cached=True)
     out = run_agent(body.message, body.lang, cfg)
     resp, details, top = out["response"], out["details"], out["top"]
 
