@@ -290,25 +290,35 @@ export function AssistantChat({ suggestions }: { suggestions: string[] }) {
                       <p className="self-start rounded-lg border border-border bg-surface px-4 py-3 text-base leading-7" dir="auto">
                         {turn.response.guidance}
                       </p>
-                      <ApprovedTextCard
-                        title={turn.response.post.title}
-                        sectionName={turn.response.post.section}
-                        html={turn.response.post.content}
-                        sourceName={turn.response.post.source_name}
-                        externalRef={turn.response.post.external_ref}
-                        lang={turn.response.post.lang}
-                        langFallback={turn.response.post.lang_fallback}
-                        readMoreHref={`${postHref(turn.response.post.slug)}${turn.response.post.lang === "en" ? "?lang=en" : ""}`}
-                        labels={labels}
-                        actions={
-                          <CopyLinkButton
-                            variant="share"
-                            path={`${postHref(turn.response.post.slug)}${turn.response.post.lang === "en" ? "?lang=en" : ""}`}
-                            title={turn.response.post.title}
-                            className="border-approved-border"
+                      {(turn.response.items ?? []).map((item, idx, arr) => {
+                        const itemHref = item.url || `${postHref(item.slug)}${item.lang === "en" ? "?lang=en" : ""}`;
+                        return (
+                          <ApprovedTextCard
+                            key={item.id}
+                            title={item.title}
+                            sectionName={item.section}
+                            html={item.content}
+                            sourceName={item.source_name}
+                            externalRef={item.external_ref}
+                            lang={item.lang}
+                            langFallback={item.lang_fallback}
+                            badgeIndex={arr.length > 1 ? idx + 1 : undefined}
+                            isExcerpt={item.is_excerpt}
+                            truncatedStart={item.truncated_start}
+                            truncatedEnd={item.truncated_end}
+                            readMoreHref={itemHref}
+                            labels={labels}
+                            actions={
+                              <CopyLinkButton
+                                variant="share"
+                                path={itemHref}
+                                title={item.title}
+                                className="border-approved-border"
+                              />
+                            }
                           />
-                        }
-                      />
+                        );
+                      })}
                       {turn.response.related.length > 0 && (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[13px] text-text-muted">{t.assistant.related}</span>
@@ -460,7 +470,7 @@ function SourcesPanel({ turn, index, t, locale }: { turn?: Turn; index: number; 
   const r = turn?.response;
   const list: SourceBrief[] = r?.sources ?? [];
   const threshold = r?.threshold ?? null;
-  const shownId = r?.type === "match" ? r.post.id : null;
+  const shownIds = new Set(r?.type === "match" ? (r.items ?? []).map((it) => it.id) : []);
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
       <div className="flex items-center justify-between gap-2">
@@ -480,7 +490,7 @@ function SourcesPanel({ turn, index, t, locale }: { turn?: Turn; index: number; 
         <ol className="flex flex-col gap-3">
           {list.map((s, i) => {
             const above = threshold !== null && s.similarity >= threshold;
-            const shown = s.post_id === shownId;
+            const shown = shownIds.has(s.post_id);
             const tag = shown ? t.assistant.shown : above ? t.assistant.relatedTag : t.assistant.belowThreshold;
             return (
               <li key={s.post_id}>

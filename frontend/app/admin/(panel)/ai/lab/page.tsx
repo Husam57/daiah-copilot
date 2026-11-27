@@ -17,7 +17,13 @@ import type { LabResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const MAX = 1000;
-const SOURCE_LABEL: Record<string, string> = { model: "النموذج", template: "قالب ثابت", heuristic: "كشف تلقائي" };
+const SOURCE_LABEL: Record<string, string> = {
+  model: "النموذج",
+  template: "قالب ثابت",
+  heuristic: "كشف تلقائي",
+  full: "النص كاملاً (قصير)",
+  mixed: "النموذج + تلقائي",
+};
 
 /** مختبر الاختبار حسب AdminLab.dc.html: نموذج السؤال ثم 3 مراحل قابلة للطي.
  * ‎?q=…&lang=en يملأ السؤال جاهزاً (من «اختبر في المختبر» في الأسئلة المقترحة) دون إرساله. */
@@ -332,7 +338,7 @@ function ResultView({ data, ms }: { data: LabResult; ms: number }) {
       >
         <p className="text-xs text-text-muted">
           {data.decision === "match"
-            ? `جملة التوجيه من: ${SOURCE_LABEL[data.guidance_source ?? ""] ?? "—"}`
+            ? `جملة التوجيه من: ${SOURCE_LABEL[data.guidance_source ?? ""] ?? "—"} · الاقتباس من: ${SOURCE_LABEL[data.extractor_source ?? ""] ?? "—"}`
             : "لا توجد مادة فوق العتبة، فتظهر رسالة عدم التوفر مع أقرب مادة والمراكز."}{" "}
           · إعدادات الإصدار {formatNumber(data.settings_version)}
         </p>
@@ -340,16 +346,23 @@ function ResultView({ data, ms }: { data: LabResult; ms: number }) {
           {preview.type === "match" ? (
             <>
               <GuidanceBubble text={preview.guidance} lang={data.classification.lang} />
-              <ApprovedTextCard
-                title={preview.post.title}
-                sectionName={preview.post.section}
-                html={preview.post.content}
-                sourceName={preview.post.source_name}
-                externalRef={preview.post.external_ref}
-                lang={preview.post.lang}
-                langFallback={preview.post.lang_fallback}
-                readMoreHref={`/admin/posts/${preview.post.id}`}
-              />
+              {(preview.items ?? []).map((item, idx, arr) => (
+                <ApprovedTextCard
+                  key={item.id}
+                  title={item.title}
+                  sectionName={item.section}
+                  html={item.content}
+                  sourceName={item.source_name}
+                  externalRef={item.external_ref}
+                  lang={item.lang}
+                  langFallback={item.lang_fallback}
+                  badgeIndex={arr.length > 1 ? idx + 1 : undefined}
+                  isExcerpt={item.is_excerpt}
+                  truncatedStart={item.truncated_start}
+                  truncatedEnd={item.truncated_end}
+                  readMoreHref={`/admin/posts/${item.id}`}
+                />
+              ))}
               {preview.related.length > 0 && (
                 <div>
                   <p className="mb-2 text-sm font-bold">مواد ذات صلة</p>

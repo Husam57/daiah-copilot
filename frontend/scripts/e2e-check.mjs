@@ -92,6 +92,13 @@ async function checkPage(path, { lang = "ar", status = 200, contains, skipDir = 
   }
 }
 
+function isVerbatim(excerptHtml, fullHtml) {
+  const clean = (s) => String(s || "").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const src = clean(fullHtml);
+  const ex = clean(excerptHtml);
+  return ex.length > 0 && src.includes(ex);
+}
+
 const PUBLIC_PAGES = ["/", "/assistant", "/library", "/shubuhat", "/intro", "/new-muslim"];
 const STATIC_PAGES = [
   ...PUBLIC_PAGES,
@@ -207,20 +214,21 @@ async function scenario() {
     r = await call("POST", "/api/admin/ai/test", { message: QUESTION, lang: "ar" });
     const lab = r.data;
     const top = lab?.results?.[0];
+    const labItem = lab?.preview?.items?.[0];
     step(
       "المختبر: decision=match بالمنشور الصحيح",
-      r.status === 200 && lab?.decision === "match" && lab?.preview?.post?.id === id,
+      r.status === 200 && lab?.decision === "match" && labItem?.id === id,
       r.status === 200 ? `top=${top?.similarity?.toFixed?.(4)} (العتبة ${lab?.threshold}), category=${lab?.classification?.category}` : info(r),
     );
     if (lab?.preview?.type === "match") {
-      step("المختبر: النص المعروض = content_ar حرفياً", lab.preview.post.content === POST.content_ar);
+      step("المختبر: المقتطف حرفي من content_ar", isVerbatim(labItem?.content, POST.content_ar));
       step("المختبر: جملة توجيه قصيرة", typeof lab.preview.guidance === "string" && lab.preview.guidance.split(/\s+/).length <= 30, lab.preview.guidance);
       step("المختبر: النتائج بدرجاتها و above_threshold", lab.results.every((x) => typeof x.similarity === "number" && typeof x.above_threshold === "boolean"));
     }
     r = await call("POST", "/api/admin/ai/test", { message: QUESTION, lang: "en" });
     step(
-      "المختبر (English): match + content_en حرفياً",
-      r.status === 200 && r.data?.preview?.type === "match" && r.data.preview.post.content === POST.content_en,
+      "المختبر (English): match + مقتطف حرفي من content_en",
+      r.status === 200 && r.data?.preview?.type === "match" && isVerbatim(r.data.preview.items?.[0]?.content, POST.content_en),
       r.status === 200 ? `decision=${r.data?.decision}` : info(r),
     );
 
@@ -255,24 +263,25 @@ async function scenario() {
     step("مواد ذات صلة (API)", r.status === 200 && Array.isArray(r.data) && !r.data.some((p) => p.slug === slug), info(r));
 
     r = await call("POST", "/api/chat", { message: QUESTION, lang: "ar", session_id: SESSION });
+    const chatItem = r.data?.items?.[0];
     step(
       "المساعد /api/chat: match بالمنشور الصحيح",
-      r.status === 200 && r.data?.type === "match" && r.data?.post?.id === id,
+      r.status === 200 && r.data?.type === "match" && chatItem?.id === id,
       r.status === 200 ? `type=${r.data?.type}, threshold=${r.data?.threshold}` : info(r),
     );
     if (r.data?.type === "match") {
-      step("المساعد: النص = content_ar حرفياً", r.data.post.content === POST.content_ar);
+      step("المساعد: المقتطف حرفي من content_ar مع رابط الموقع", isVerbatim(chatItem?.content, POST.content_ar) && chatItem?.url === `/posts/${slug}`);
       step("المساعد: المصادر بدرجاتها + العتبة + log_id",
         Array.isArray(r.data.sources) && r.data.sources.every((x) => typeof x.similarity === "number") && typeof r.data.threshold === "number" && r.data.log_id > 0);
       const fb = await call("POST", "/api/chat/feedback", { log_id: r.data.log_id, helpful: true });
       step("المساعد: تقييم «مفيد»", fb.status === 200, info(fb));
     }
     r = await call("POST", "/api/chat", { message: QUESTION, lang: "en", session_id: SESSION });
-    step("المساعد (English): content_en حرفياً", r.status === 200 && r.data?.type === "match" && r.data.post.content === POST.content_en, info(r));
+    step("المساعد (English): مقتطف حرفي من content_en", r.status === 200 && r.data?.type === "match" && isVerbatim(r.data.items?.[0]?.content, POST.content_en), info(r));
     r = await call("POST", "/api/chat", { message: FAR_QUESTION, lang: "ar", session_id: SESSION });
     step(
       "المساعد: سؤال بعيد ← fallback مع المراكز والعتبة",
-      r.status === 200 && r.data?.type === "fallback" && Array.isArray(r.data?.referrals) && typeof r.data?.threshold === "number" && !r.data?.post,
+      r.status === 200 && r.data?.type === "fallback" && Array.isArray(r.data?.referrals) && typeof r.data?.threshold === "number" && !r.data?.items && !r.data?.post,
       r.status === 200 ? `type=${r.data?.type}` : info(r),
     );
 

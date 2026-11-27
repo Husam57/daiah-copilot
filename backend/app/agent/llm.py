@@ -15,6 +15,7 @@ def generate(
     *,
     json_schema: dict | None = None,
     max_tokens: int = 200,
+    timeout_ms: int = CHAT_TIMEOUT_MS,
 ) -> tuple[str | None, str | None]:
     """يرجع (النص، اسم النموذج الذي نجح) أو (None, None) إذا فشلت كل النماذج."""
     try:
@@ -26,7 +27,7 @@ def generate(
         system_instruction=system,
         temperature=0,
         max_output_tokens=max_tokens,
-        http_options=types.HttpOptions(timeout=CHAT_TIMEOUT_MS),
+        http_options=types.HttpOptions(timeout=timeout_ms),
         **(
             {"response_mime_type": "application/json", "response_json_schema": json_schema}
             if json_schema else {}

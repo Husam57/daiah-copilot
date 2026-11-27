@@ -244,7 +244,7 @@ const ar = {
     sources: "المصادر المسترجعة",
     sourcesFor: (n: string) => `للسؤال ${n}`,
     sourcesDesc:
-      "المواد التي وجدها البحث، ودرجة ارتباط كل منها بسؤالك. تُعرض فقط المادة التي تتجاوز حد الارتباط.",
+      "المواد التي وجدها البحث، ودرجة ارتباط كل منها بسؤالك. تُعرض مقتطفات حرفية من المواد التي تتجاوز حد الارتباط (حتى ٣ مصادر).",
     sourcesEmpty: "اطرح سؤالاً لترى المواد التي يجدها البحث ودرجة ارتباطها.",
     shown: "معروضة",
     relatedTag: "مادة ذات صلة",
@@ -265,6 +265,7 @@ const ar = {
     sourcePrefix: "المصدر: ",
     originalLink: "الرابط الأصلي",
     readFull: "اقرأ المادة كاملة",
+    excerptNote: "مقتطف حرفي للجزء المناسب لسؤالك — يمكنك قراءة المادة كاملة من الرابط أدناه.",
     fallbackTitle: "هذه المسألة غير متوفرة في المنصة حالياً",
     closest: "أقرب مادة ذات صلة",
     centers: "مراكز ودعاة معتمدون",
@@ -506,7 +507,7 @@ const en: Dict = {
     sources: "Retrieved sources",
     sourcesFor: (n) => `for question ${n}`,
     sourcesDesc:
-      "The materials the search found, and how related each is to your question. Only material above the relevance threshold is shown.",
+      "The materials the search found, and how related each is to your question. Verbatim excerpts are shown for materials above the relevance threshold (up to 3 sources).",
     sourcesEmpty: "Ask a question to see the materials the search finds and their relevance.",
     shown: "shown",
     relatedTag: "related material",
@@ -527,6 +528,7 @@ const en: Dict = {
     sourcePrefix: "Source: ",
     originalLink: "Original link",
     readFull: "Read the full material",
+    excerptNote: "Verbatim excerpt matching your question — read the full material using the link below.",
     fallbackTitle: "This topic is not available on the platform yet",
     closest: "Closest related material",
     centers: "Approved centers and callers",

@@ -209,15 +209,21 @@ export interface ReferralCenter {
   contact: string | null;
 }
 
-export interface MatchedPost {
+export interface MatchedExcerpt {
   id: number;
   slug: string;
+  url: string;
   title: string;
   section: string | null;
   content: string;
+  excerpt_text?: string;
+  is_excerpt: boolean;
+  truncated_start?: boolean;
+  truncated_end?: boolean;
+  word_count?: number;
+  similarity?: number;
   lang: Lang;
   lang_fallback: boolean;
-  summary: string | null;
   source_name: string | null;
   external_ref: string | null;
   file_url: string | null;
@@ -228,7 +234,7 @@ export type AgentResponse =
   | {
       type: "match";
       guidance: string;
-      post: MatchedPost;
+      items: MatchedExcerpt[];
       related: SourceBrief[];
       sources: SourceBrief[];
     }
@@ -246,9 +252,12 @@ export interface LabResult {
   top_k: number;
   top_score: number | null;
   decision: "match" | "fallback";
+  matched_count?: number;
   results: (SourceBrief & { above_threshold: boolean; chunk_lang: Lang; best_chunk: string })[];
   guidance_source: string | null;
   guidance_model: string | null;
+  extractor_source?: string | null;
+  extractor_model?: string | null;
   settings_version: number;
   preview: AgentResponse;
 }

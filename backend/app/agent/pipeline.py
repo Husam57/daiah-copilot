@@ -1,7 +1,7 @@
-"""مسار الإيجنت الكامل: تصنيف + بحث -> قرار (match / fallback) -> بناء الرد.
+"""مسار الإيجنت الكامل: تصنيف + بحث -> قرار (match / fallback) -> اقتباس حرفي -> بناء الرد.
 
-القاعدة الذهبية: post.content = content_ar/content_en من جدول posts حرفياً (لا يمر على أي نموذج).
-النموذج يكتب فقط جملة التوجيه (من العنوان واسم القسم) ويصنّف السؤال.
+القاعدة الذهبية: المقتطفات المعروضة مأخوذة حرفياً من جدول posts عند حدود الجمل الكاملة.
+النموذج يكتب فقط جملة التوجيه (من العنوان واسم القسم)، يصنّف السؤال، ويحدد أرقام جمل الاقتباس.
 """
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -12,8 +12,9 @@ from ..cache import cached_public
 from ..db import get_supabase
 from ..models import AISettings
 from ..rag.embeddings import EmbeddingError, embed_query
-from ..rag.search import pick_match, search
+from ..rag.search import pick_matches, search
 from .classifier import classify
+from .extractor import extract_excerpts
 from .guidance import make_guidance
 
 _POST_COLUMNS = (
@@ -67,6 +68,10 @@ def _referrals() -> list[dict]:
     )
 
 
+def _post_url(slug: str, lang: str) -> str:
+    return f"/posts/{slug}?lang=en" if lang == "en" else f"/posts/{slug}"
+
+
 def run_agent(message: str, lang: str, cfg: AISettings, *, show_errors: bool = False) -> dict:
     """يرجع {response, details}. response = ما يراه المستخدم، details = للمختبر والسجل.
     show_errors: تفاصيل خطأ Gemini في الرد (للمختبر في اللوحة فقط)؛ الزائر يرى رسالة عامة."""
@@ -83,24 +88,74 @@ def run_agent(message: str, lang: str, cfg: AISettings, *, show_errors: bool = F
     classification = f_class.result()
     reply_lang = classification["lang"]  # لغة جملة التوجيه/رسالة البدائل = لغة السؤال
 
-    # المادة المختارة: أول نتيجة بترتيب الدمج (RRF) تشابهها الدلالي ≥ العتبة
-    chosen = pick_match(results, cfg.similarity_threshold)
-    top = chosen or (results[0] if results else None)
-    post = _load_post(chosen["post_id"]) if chosen else None  # تحقق إضافي أنه ما زال منشوراً
+    # المواد المختارة: كل النتائج بترتيب الدمج التي تشابهها الدلالي ≥ العتبة (حتى 3 مصادر)
+    matches = pick_matches(results, cfg.similarity_threshold)
+    loaded: list[tuple[dict, dict]] = []
+    for m in matches:
+        p = _load_post(m["post_id"])
+        if p:
+            loaded.append((m, p))
 
-    if post:
-        payload = build_post_payload(post, lang)
-        guidance = make_guidance(payload["title"], payload["section"] or "", reply_lang, cfg.guidance_prompt)
+    top = loaded[0][0] if loaded else (results[0] if results else None)
+
+    if loaded:
+        payloads = [(m, build_post_payload(p, lang)) for m, p in loaded]
+        excerpts, ext_meta = extract_excerpts(
+            message,
+            [
+                {
+                    "id": pl["id"],
+                    "lang": pl["lang"],
+                    "content": pl["content"],
+                    "matched_chunks": m.get("matched_chunks") or [m["best_chunk"]],
+                }
+                for m, pl in payloads
+            ],
+        )
+        items: list[dict] = []
+        for m, pl in payloads:
+            ex = excerpts[pl["id"]]
+            items.append({
+                "id": pl["id"],
+                "slug": pl["slug"],
+                "url": _post_url(pl["slug"], pl["lang"]),
+                "title": pl["title"],
+                "section": pl["section"],
+                "content": ex["html"],
+                "excerpt_text": ex["text"],
+                "is_excerpt": ex["is_excerpt"],
+                "truncated_start": ex["truncated_start"],
+                "truncated_end": ex["truncated_end"],
+                "word_count": ex["word_count"],
+                "similarity": m["similarity"],
+                "lang": pl["lang"],
+                "lang_fallback": pl["lang_fallback"],
+                "source_name": pl["source_name"],
+                "external_ref": pl["external_ref"],
+                "file_url": pl["file_url"],
+                "content_type": pl["content_type"],
+            })
+
+        shown_ids = {it["id"] for it in items}
+        guidance = make_guidance(
+            items[0]["title"],
+            items[0]["section"] or "",
+            reply_lang,
+            cfg.guidance_prompt,
+            source_count=len(items),
+            titles=[it["title"] for it in items],
+        )
         response = {
             "type": "match",
             "guidance": guidance["text"],
-            "post": payload,
-            "related": [_brief(r) for r in results if r["post_id"] != top["post_id"]][:3],
+            "items": items,
+            "related": [_brief(r) for r in results if r["post_id"] not in shown_ids][:3],
             "sources": [_brief(r) for r in results],
             "threshold": cfg.similarity_threshold,
         }
     else:
         guidance = None
+        ext_meta = {"source": None, "model": None}
         response = {
             "type": "fallback",
             "message": cfg.fallback_message_en if reply_lang == "en" else cfg.fallback_message_ar,
@@ -117,6 +172,7 @@ def run_agent(message: str, lang: str, cfg: AISettings, *, show_errors: bool = F
         "top_k": cfg.top_k,
         "top_score": top["similarity"] if top else None,
         "decision": response["type"],
+        "matched_count": len(loaded),
         "results": [
             {**_brief(r), "above_threshold": r["similarity"] >= cfg.similarity_threshold,
              "chunk_lang": r["chunk_lang"], "best_chunk": r["best_chunk"],
@@ -126,6 +182,8 @@ def run_agent(message: str, lang: str, cfg: AISettings, *, show_errors: bool = F
         "search_mode": results[0].get("mode") if results else None,
         "guidance_source": guidance["source"] if guidance else None,
         "guidance_model": guidance["model"] if guidance else None,
+        "extractor_source": ext_meta["source"],
+        "extractor_model": ext_meta["model"],
         "settings_version": cfg.version,
     }
     return {"response": response, "details": details, "top": top}

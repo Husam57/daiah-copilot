@@ -17,6 +17,7 @@ export interface AnswerLabels {
   sourcePrefix: string;
   originalLink: string;
   readFull: string;
+  excerptNote: string;
   langFallbackNote: string;
   fallbackTitle: string;
   closest: string;
@@ -33,6 +34,7 @@ export const AR_LABELS: AnswerLabels = {
   sourcePrefix: "المصدر: ",
   originalLink: "الرابط الأصلي",
   readFull: "اقرأ المادة كاملة",
+  excerptNote: "مقتطف حرفي للجزء المناسب لسؤالك — يمكنك قراءة المادة كاملة من الرابط أدناه.",
   langFallbackNote: "لا تتوفر نسخة إنجليزية من هذه المادة، فعُرض النص العربي.",
   fallbackTitle: "هذه المسألة غير متوفرة في المنصة حالياً",
   closest: "أقرب مادة ذات صلة",
@@ -46,7 +48,7 @@ export const AR_LABELS: AnswerLabels = {
 
 const isInternal = (href: string) => href.startsWith("/");
 
-/** ⭐ بطاقة "نص معتمد": نص المنشور حرفياً (منظّف بـ DOMPurify) مع مصدره (Assistant.dc.html). */
+/** ⭐ بطاقة "نص معتمد": نص المنشور أو المقتطف الحرفي (منظّف بـ DOMPurify) مع مصدره. */
 export function ApprovedTextCard({
   title,
   sectionName,
@@ -56,6 +58,10 @@ export function ApprovedTextCard({
   readMoreHref,
   lang = "ar",
   langFallback,
+  badgeIndex,
+  isExcerpt,
+  truncatedStart,
+  truncatedEnd,
   labels = AR_LABELS,
   headingLevel = "h2",
   actions,
@@ -70,6 +76,12 @@ export function ApprovedTextCard({
   lang?: "ar" | "en";
   /** طُلبت الإنجليزية ولا توجد نسخة: يُعرض العربي */
   langFallback?: boolean;
+  /** رقم المصدر عند تعدد المصادر المعروضة */
+  badgeIndex?: number;
+  /** هل المعروض مقتطف من مادة أطول أم المادة كاملة */
+  isExcerpt?: boolean;
+  truncatedStart?: boolean;
+  truncatedEnd?: boolean;
   labels?: AnswerLabels;
   headingLevel?: "h2" | "h3";
   /** أزرار إضافية في التذييل بجانب «اقرأ المادة كاملة» (مثل «شارك المادة») */
@@ -82,6 +94,11 @@ export function ApprovedTextCard({
     <article className={cn("overflow-hidden rounded-lg border border-approved-border bg-primary-50", className)} aria-label={labels.approvedHeader}>
       <header className="flex flex-wrap items-center justify-between gap-2 bg-primary-700 px-[18px] py-3 text-sm font-bold text-white">
         <span className="inline-flex items-center gap-2">
+          {badgeIndex !== undefined && (
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white text-xs font-extrabold text-primary-700">
+              {badgeIndex}
+            </span>
+          )}
           <ShieldCheck className="size-4" aria-hidden />
           {labels.approvedHeader}
         </span>
@@ -94,7 +111,16 @@ export function ApprovedTextCard({
       <div className="flex flex-col gap-3 p-5" lang={lang} dir={dir}>
         {langFallback && <p className="rounded-sm bg-surface px-2.5 py-1.5 text-xs text-text-secondary">{labels.langFallbackNote}</p>}
         <H className="text-xl font-bold leading-[30px] text-primary-700">{title}</H>
-        <SafeHtml html={html} className="text-[17px] leading-8" />
+        {isExcerpt && (
+          <p className="text-xs font-medium text-text-secondary">
+            {labels.excerptNote}
+          </p>
+        )}
+        <div className="flex flex-col gap-1">
+          {truncatedStart && <span className="text-xs tracking-widest text-text-muted" aria-hidden>…</span>}
+          <SafeHtml html={html} className="text-[17px] leading-8" />
+          {truncatedEnd && <span className="text-xs tracking-widest text-text-muted" aria-hidden>…</span>}
+        </div>
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-approved-border px-5 py-3.5 text-sm text-text-secondary">
         <span className="min-w-0">

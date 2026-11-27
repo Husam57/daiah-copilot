@@ -21,6 +21,8 @@ from .normalize import normalize_ar
 log = logging.getLogger("daiah.rag")
 
 CHUNKS_PER_POST = 4  # نطلب مقاطع أكثر من top_k لأن عدة مقاطع قد تكون لنفس المنشور
+MAX_CHUNKS_PER_POST = 3  # أعلى المقاطع المحفوظة لكل منشور لتحديد نطاق الاقتباس
+MAX_MATCH_SOURCES = 3    # أقصى عدد مصادر متطابقة تُعرض في رد واحد
 RRF_K = 60           # ثابت Reciprocal Rank Fusion المعتاد
 TEXT_MIN = 0.2       # أدنى word_similarity يُعتبر تطابقاً نصياً (أقل منه ضجيج حروف مشتركة)
 SEARCH_MODES = ("semantic", "hybrid")
@@ -78,13 +80,21 @@ def fuse(rows: list[dict], top_k: int) -> list[dict]:
         ts = row.get("text_score")
         cur = best.setdefault(pid, {
             "post_id": pid, "similarity": -1.0, "best_chunk": "", "chunk_lang": row.get("chunk_lang"),
-            "text_score": None, "text_chunk": None,
+            "text_score": None, "text_chunk": None, "_chunks": {},
         })
+        key = (row.get("chunk_lang"), row["chunk_text"])
+        if sim > cur["_chunks"].get(key, -1.0):
+            cur["_chunks"][key] = sim
         if sim > cur["similarity"]:
             cur.update(similarity=sim, best_chunk=row["chunk_text"], chunk_lang=row.get("chunk_lang"))
         if ts is not None and (cur["text_score"] is None or ts > cur["text_score"]):
             cur.update(text_score=float(ts), text_chunk=row["chunk_text"])
     posts = list(best.values())
+    for p in posts:
+        raw_chunks = p.pop("_chunks")
+        same_lang = [(s, txt) for (cl, txt), s in raw_chunks.items() if cl == p["chunk_lang"]]
+        same_lang.sort(key=lambda item: item[0], reverse=True)
+        p["matched_chunks"] = [txt for _, txt in same_lang[:MAX_CHUNKS_PER_POST]]
     for rank, p in enumerate(sorted(posts, key=lambda p: p["similarity"], reverse=True), start=1):
         p["sem_rank"] = rank
     with_text = sorted((p for p in posts if p["text_score"] is not None), key=lambda p: p["text_score"], reverse=True)
@@ -97,9 +107,21 @@ def fuse(rows: list[dict], top_k: int) -> list[dict]:
     return posts[:top_k]
 
 
+def pick_matches(
+    results: list[dict],
+    threshold: float,
+    max_sources: int = MAX_MATCH_SOURCES,
+) -> list[dict]:
+    """المواد التي تُعرض: النتائج بترتيب الدمج التي تشابهها الدلالي ≥ العتبة (بحد أقصى max_sources)."""
+    if max_sources <= 0:
+        return []
+    return [r for r in results if r["similarity"] >= threshold][:max_sources]
+
+
 def pick_match(results: list[dict], threshold: float) -> dict | None:
-    """المادة التي تُعرض: أول نتيجة بترتيب الدمج تشابهها الدلالي ≥ العتبة، وإلا None (fallback)."""
-    return next((r for r in results if r["similarity"] >= threshold), None)
+    """المادة التي تُعرض (الأولى فقط): للتوافق مع الاختبارات، وإلا None (fallback)."""
+    matches = pick_matches(results, threshold, max_sources=1)
+    return matches[0] if matches else None
 
 
 def search(
